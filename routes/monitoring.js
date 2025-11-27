@@ -8,10 +8,10 @@
 const express = require('express');
 const router = express.Router();
 const resolve = require('../utils/moduleResolver');
-const logger = require(resolve('../utils/logger'));
-const authMiddleware = require(resolve('../middleware/authMiddleware'));
-const { apm } = require(resolve('../utils/apmMonitoring'));
-const { manager: cbManager } = require(resolve('../utils/circuitBreaker'));
+const logger = require(resolve('utils/logger'));
+const authMiddleware = require(resolve('auth/authMiddleware'));
+const { apm } = require(resolve('utils/apmMonitoring'));
+const { manager: cbManager } = require(resolve('utils/circuitBreaker'));
 
 /**
  * Full health report - includes APM, circuit breakers, system info
