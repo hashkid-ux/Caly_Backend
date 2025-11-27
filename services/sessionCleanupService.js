@@ -272,36 +272,12 @@ class SessionCleanupService {
   }
 
   /**
-   * Cleanup event listeners on server shutdown
+   * Graceful shutdown is handled in server.js
+   * This method is deprecated - use server.js shutdown handlers instead
    */
   setupGracefulShutdown(server, wss) {
-    nodeCleanup((exitCode, signal) => {
-      logger.info('🧹 Cleaning up on shutdown', {
-        signal,
-        exitCode
-      });
-
-      // Stop automatic cleanup
-      this.stopAutomaticCleanup();
-
-      // Close all WebSocket connections
-      if (wss) {
-        wss.clients.forEach(client => {
-          client.close(1000, 'Server shutting down');
-        });
-      }
-
-      // Close HTTP server
-      if (server) {
-        server.close(() => {
-          logger.info('✅ Server shutdown complete');
-          process.exit(exitCode || 0);
-        });
-      }
-
-      // Timeout for cleanup (5 seconds)
-      return true;
-    });
+    // Graceful shutdown handled by process event listeners in server.js
+    logger.debug('Graceful shutdown handlers already attached in server.js');
   }
 
   /**

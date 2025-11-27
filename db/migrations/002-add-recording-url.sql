@@ -8,7 +8,7 @@ ADD COLUMN IF NOT EXISTS recording_url VARCHAR(500) DEFAULT NULL;
 CREATE TABLE IF NOT EXISTS call_charges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   call_id UUID NOT NULL REFERENCES calls(id) ON DELETE CASCADE,
-  client_id UUID NOT NULL REFERENCES company(id) ON DELETE CASCADE,
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   duration_seconds INTEGER NOT NULL,
   rate_per_minute DECIMAL(10, 2) NOT NULL DEFAULT 30,
   total_amount DECIMAL(10, 2) NOT NULL,

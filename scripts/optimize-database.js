@@ -15,7 +15,6 @@ async function createOptimizedIndexes() {
       { name: 'idx_calls_client_created', query: 'CREATE INDEX IF NOT EXISTS idx_calls_client_created ON calls(client_id, created_at DESC);' },
       { name: 'idx_calls_resolved_client', query: 'CREATE INDEX IF NOT EXISTS idx_calls_resolved_client ON calls(client_id, resolved, created_at DESC);' },
       { name: 'idx_session_expire', query: 'CREATE INDEX IF NOT EXISTS idx_session_expire ON "session"(expire);' },
-      { name: 'idx_actions_client_call', query: 'CREATE INDEX IF NOT EXISTS idx_actions_client_call ON actions(client_id, call_id);' },
       { name: 'idx_entities_call', query: 'CREATE INDEX IF NOT EXISTS idx_entities_call ON entities(call_id);' }
     ];
 

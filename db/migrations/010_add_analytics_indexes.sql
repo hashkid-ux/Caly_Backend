@@ -11,9 +11,6 @@ CREATE INDEX IF NOT EXISTS idx_calls_resolved_client ON calls(client_id, resolve
 -- Index for session cleanup efficiency
 CREATE INDEX IF NOT EXISTS idx_session_expire ON "session"(expire);
 
--- Index for actions queries
-CREATE INDEX IF NOT EXISTS idx_actions_client_call ON actions(client_id, call_id);
-
 -- Index for entities queries
 CREATE INDEX IF NOT EXISTS idx_entities_call ON entities(call_id);
 
