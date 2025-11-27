@@ -20,8 +20,3 @@ ANALYZE actions;
 ANALYZE entities;
 ANALYZE "session";
 ANALYZE users;
-
--- Log migration completion
-INSERT INTO migrations_applied (name, applied_at) 
-VALUES ('010_add_analytics_indexes', NOW())
-ON CONFLICT DO NOTHING;
