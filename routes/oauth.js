@@ -65,7 +65,7 @@ router.get(
       const tokenPayload = {
         userId: user.id,
         email: user.email,
-        clientId: user.client_id,  // ✅ Use camelCase to match frontend expectations
+        client_id: user.client_id,  // ✅ Use snake_case to match email/password login and middleware
         role: user.role,
         name: user.name,
       };
