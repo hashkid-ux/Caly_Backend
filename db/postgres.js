@@ -235,5 +235,6 @@ module.exports = {
   entities,
   clients,
   auditLog,
-  close
+  close,
+  pool
 };

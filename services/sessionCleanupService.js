@@ -12,7 +12,6 @@
 const logger = require('../utils/logger');
 const db = require('../db/postgres');
 const { pool } = require('../db/pooling');
-const nodeCleanup = require('node-cleanup');
 
 class SessionCleanupService {
   constructor() {
