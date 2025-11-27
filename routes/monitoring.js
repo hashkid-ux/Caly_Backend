@@ -9,7 +9,7 @@ const express = require('express');
 const router = express.Router();
 const resolve = require('../utils/moduleResolver');
 const logger = require(resolve('utils/logger'));
-const authMiddleware = require(resolve('auth/authMiddleware'));
+const { authMiddleware } = require(resolve('auth/authMiddleware'));
 const { apm } = require(resolve('utils/apmMonitoring'));
 const { manager: cbManager } = require(resolve('utils/circuitBreaker'));
 
