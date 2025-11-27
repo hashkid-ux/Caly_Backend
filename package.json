@@ -30,6 +30,9 @@
   "author": "Caly Voice AI",
   "license": "PROPRIETARY",
   "dependencies": {
+    "@sentry/node": "^7.120.4",
+    "@sentry/profiling-node": "^10.27.0",
+    "@sentry/tracing": "^7.120.4",
     "axios": "^1.6.2",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.2",
@@ -52,8 +55,6 @@
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.11.3",
     "redis": "^4.6.11",
-    "@sentry/node": "^7.108.0",
-    "@sentry/tracing": "^7.108.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
     "uuid": "^9.0.1",
