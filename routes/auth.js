@@ -63,11 +63,21 @@ router.post('/register', async (req, res) => {
 
     // ✅ PHASE 2 FIX 2.4: Create client (company) INACTIVE until email verified
     const clientId = uuidv4();
+    
+    // Initialize default settings for new client
+    const defaultSettings = {
+      shopify: { store: '', apiKey: '', apiSecret: '' },
+      exotel: { number: '', sid: '', token: '' },
+      business: { returnWindowDays: 14, refundAutoThreshold: 2000, cancelWindowHours: 24, escalationThreshold: 60 },
+      channels: { whatsApp: false, sms: true, email: true },
+      localization: { timezone: 'Asia/Kolkata', language: 'hi' }
+    };
+    
     const clientResult = await db.query(
-      `INSERT INTO clients (id, name, email, active, created_at) 
-       VALUES ($1, $2, $3, false, NOW()) 
+      `INSERT INTO clients (id, name, email, active, settings, created_at) 
+       VALUES ($1, $2, $3, false, $4, NOW()) 
        RETURNING id, name, email`,
-      [clientId, companyName, email]
+      [clientId, companyName, email, JSON.stringify(defaultSettings)]
     );
 
     const client = clientResult.rows[0];

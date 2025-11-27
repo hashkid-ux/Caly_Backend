@@ -121,11 +121,20 @@ passport.use(
         }
 
         // CHECK 2: Create new client only if email is unique
+        // Initialize default settings for new OAuth client
+        const defaultSettings = {
+          shopify: { store: '', apiKey: '', apiSecret: '' },
+          exotel: { number: '', sid: '', token: '' },
+          business: { returnWindowDays: 14, refundAutoThreshold: 2000, cancelWindowHours: 24, escalationThreshold: 60 },
+          channels: { whatsApp: false, sms: true, email: true },
+          localization: { timezone: 'Asia/Kolkata', language: 'hi' }
+        };
+        
         const clientResult = await db.query(
-          `INSERT INTO clients (id, name, email, active, created_at)
-           VALUES ($1, $2, $3, true, NOW())
+          `INSERT INTO clients (id, name, email, active, settings, created_at)
+           VALUES ($1, $2, $3, true, $4, NOW())
            RETURNING id`,
-          [newClientId, `${name}'s Company`, email]
+          [newClientId, `${name}'s Company`, email, JSON.stringify(defaultSettings)]
         );
 
         // CREATE: New user with OAuth credentials (no password_hash needed)
