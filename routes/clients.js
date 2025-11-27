@@ -43,7 +43,7 @@ router.get('/:id', enforceClientAccess, async (req, res) => {
 });
 
 // PUT /api/clients/:id - Update company configuration (MULTI-TENANT: user can only update their own)
-router.put('/:id', enforceClientAccess, validateBody(commonSchemas.onboardingCompleteSchema), async (req, res) => {
+router.put('/:id', enforceClientAccess, validateBody(commonSchemas.settingsUpdateSchema), async (req, res) => {
   try {
     const { id } = req.params;
     const userClientId = req.user.client_id;

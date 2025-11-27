@@ -721,6 +721,79 @@ const commonSchemas = {
       required: false,
     },
   },
+  
+  // ✅ PHASE 3 FIX 2: Settings update schema - ALL fields optional for partial updates
+  settingsUpdateSchema: {
+    shopifyStore: {
+      type: 'url',
+      required: false,
+    },
+    shopifyApiKey: {
+      type: 'string',
+      required: false,
+      minLength: 32,
+    },
+    shopifyApiSecret: {
+      type: 'string',
+      required: false,
+      minLength: 32,
+    },
+    exotelNumber: {
+      type: 'phone',
+      required: false,
+    },
+    exotelSid: {
+      type: 'string',
+      required: false,
+      minLength: 5,
+    },
+    exotelToken: {
+      type: 'string',
+      required: false,
+      minLength: 20,
+    },
+    returnWindowDays: {
+      type: 'number',
+      required: false,
+      min: 1,
+      max: 365,
+    },
+    refundAutoThreshold: {
+      type: 'number',
+      required: false,
+      min: 0,
+    },
+    cancelWindowHours: {
+      type: 'number',
+      required: false,
+      min: 0,
+    },
+    escalationThreshold: {
+      type: 'number',
+      required: false,
+      min: 0,
+    },
+    timezone: {
+      type: 'string',
+      required: false,
+    },
+    language: {
+      type: 'string',
+      required: false,
+    },
+    enableWhatsApp: {
+      type: 'boolean',
+      required: false,
+    },
+    enableSMS: {
+      type: 'boolean',
+      required: false,
+    },
+    enableEmail: {
+      type: 'boolean',
+      required: false,
+    },
+  },
 };
 
 module.exports = {
