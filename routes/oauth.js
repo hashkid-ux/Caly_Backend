@@ -65,7 +65,7 @@ router.get(
       const tokenPayload = {
         userId: user.id,
         email: user.email,
-        client_id: user.client_id,  // FIXED: Use snake_case for consistency
+        clientId: user.client_id,  // ✅ Use camelCase to match frontend expectations
         role: user.role,
         name: user.name,
       };
@@ -141,7 +141,15 @@ router.get('/profile', async (req, res) => {
     );
 
     res.json({
-      user: userRecord,
+      user: {
+        id: userRecord.id,
+        name: userRecord.name,
+        email: userRecord.email,
+        role: userRecord.role,
+        clientId: userRecord.client_id,  // ✅ Convert snake_case to camelCase
+        isVerified: userRecord.is_verified,
+        createdAt: userRecord.created_at,
+      },
       client: client.rows[0] || null,
     });
   } catch (error) {
