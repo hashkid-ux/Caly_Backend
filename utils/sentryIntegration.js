@@ -11,7 +11,6 @@
  */
 
 const Sentry = require('@sentry/node');
-const { ProfilingIntegration } = require('@sentry/profiling-node');
 
 /**
  * Initialize Sentry for error tracking
@@ -38,12 +37,13 @@ function initSentry() {
       tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
       profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
       integrations: [
-        new ProfilingIntegration(),
         new Sentry.Integrations.Http({ tracing: true }),
         new Sentry.Integrations.Express({
           request: true,
           serverName: false,
         }),
+        new Sentry.Integrations.OnUncaughtException(),
+        new Sentry.Integrations.OnUnhandledRejection(),
       ],
       // Secure PII handling - filter sensitive data
       beforeSend(event, hint) {
