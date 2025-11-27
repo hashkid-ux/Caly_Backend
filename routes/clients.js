@@ -19,7 +19,7 @@ router.get('/:id', enforceClientAccess, async (req, res) => {
     }
 
     const result = await db.query(
-      `SELECT id, company_name, created_at, settings FROM clients WHERE id = $1`,
+      `SELECT id, name as company_name, created_at, settings FROM clients WHERE id = $1`,
       [userClientId]
     );
 
@@ -106,7 +106,7 @@ router.put('/:id', enforceClientAccess, validateBody(commonSchemas.onboardingCom
       `UPDATE clients 
        SET settings = $1, updated_at = NOW() 
        WHERE id = $2 
-       RETURNING id, company_name, settings`,
+       RETURNING id, name as company_name, settings`,
       [JSON.stringify(settings), userClientId]
     );
 
