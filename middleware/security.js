@@ -60,7 +60,7 @@ const cspHeader = (req, res, next) => {
     "style-src 'self' https://fonts.googleapis.com", // Styles (removed unsafe-inline)
     "img-src 'self' data: https:", // Images
     "font-src 'self' https://fonts.gstatic.com", // Fonts
-    "connect-src 'self' wss: https://api.openai.com https://api.exotel.com https://calybackend-production.up.railway.app", // API calls
+    "connect-src 'self' wss: https://api.openai.com https://api.exotel.com https://calybackend-production-2c68.up.railway.app", // API calls
     "media-src 'self'", // Audio/video
     "object-src 'none'", // Plugins
     "frame-ancestors 'none'", // No embedded frames
@@ -159,7 +159,7 @@ const securityHeaders = (req, res, next) => {
     "style-src 'self' https://fonts.googleapis.com",
     "img-src 'self' data: https:",
     "font-src 'self' https://fonts.gstatic.com",
-    "connect-src 'self' wss: https://api.openai.com https://api.exotel.com https://calybackend-production.up.railway.app",
+    "connect-src 'self' wss: https://api.openai.com https://api.exotel.com https://calybackend-production-2c68.up.railway.app",
     "media-src 'self'",
     "object-src 'none'",
     "frame-ancestors 'none'",
