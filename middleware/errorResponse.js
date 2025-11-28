@@ -81,8 +81,11 @@ class StandardError extends Error {
       timestamp: this.timestamp
     };
 
-    // Include details in development
-    if (process.env.NODE_ENV !== 'production' && this.details) {
+    // Always include validation field details (user-facing, not security-sensitive)
+    if (this.code === 'VALIDATION_ERROR' && this.details) {
+      response.fields = this.details;
+    } else if (process.env.NODE_ENV !== 'production' && this.details) {
+      // Only include other details in development
       response.details = this.details;
     }
 

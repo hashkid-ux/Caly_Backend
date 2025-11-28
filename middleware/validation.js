@@ -222,6 +222,65 @@ const validators = {
 };
 
 /**
+ * User-Friendly Error Message Mapper
+ * Converts technical validation errors into helpful messages for users.
+ */
+const errorMessages = {
+  shopifyStore: {
+    url: 'Store URL must start with https:// (e.g., https://mystore.myshopify.com)',
+    helper: 'Format: https://yourstore.myshopify.com'
+  },
+  shopifyApiKey: {
+    minLength: 'API key must be at least 32 characters (usually starts with "shppa_")',
+    helper: 'Find in Shopify Admin > App settings'
+  },
+  shopifyApiSecret: {
+    minLength: 'API secret must be at least 32 characters (usually starts with "shpss_")',
+    helper: 'Keep this secret secure'
+  },
+  exotelNumber: {
+    phone: 'Phone must be in E.164 format (e.g., +91 8000000000)',
+    helper: 'Format: +[country][number] like +91 8012345678'
+  },
+  exotelSid: {
+    minLength: 'SID must be at least 5 characters',
+    helper: 'Your Exotel Subscriber ID from dashboard'
+  },
+  exotelToken: {
+    minLength: 'API token must be at least 20 characters',
+    helper: 'From Exotel dashboard - keep it private'
+  },
+  returnWindowDays: {
+    range: 'Return window must be between 1 and 365 days',
+    helper: 'Days customers can return items (1-365)'
+  },
+  refundAutoThreshold: {
+    range: 'Refund threshold must be 0 or higher',
+    helper: 'Refund orders below this amount automatically (₹)'
+  },
+  cancelWindowHours: {
+    range: 'Cancel window must be 0 or higher',
+    helper: 'Hours customers have to cancel orders'
+  },
+  escalationThreshold: {
+    range: 'Escalation threshold must be 0 or higher',
+    helper: 'Escalate issues below this confidence level'
+  },
+  timezone: {
+    helper: 'Used for scheduling and displaying times'
+  },
+  language: {
+    helper: 'Default language for communications'
+  }
+};
+
+function getUserFriendlyErrorMessage(field, errorType) {
+  const fieldMessages = errorMessages[field];
+  if (!fieldMessages) return `Please check ${field}`;
+  return fieldMessages[errorType] || `Please check ${field}`;
+}
+
+/**
  * Schema Validator Class
  * 
  * Validates data against a predefined schema with field rules.
@@ -335,9 +394,10 @@ class SchemaValidator {
       }
     }
 
-    // Min length
+    // Min length - use friendly messages when available
     if (rules.minLength && value.length < rules.minLength) {
-      errors.push(`${field} must be at least ${rules.minLength} characters`);
+      const friendlyMsg = getUserFriendlyErrorMessage(field, 'minLength');
+      errors.push(friendlyMsg || `${field} must be at least ${rules.minLength} characters`);
     }
 
     // Max length
@@ -359,18 +419,18 @@ class SchemaValidator {
   }
 
   /**
-   * Validate type
+   * Validate type - uses friendly error messages from errorMessages mapper
    */
   validateType(field, value, type, rules) {
     switch (type) {
       case 'email':
-        return !validators.email(value) ? `${field} must be a valid email` : null;
+        return !validators.email(value) ? getUserFriendlyErrorMessage(field, 'email') || `${field} must be a valid email` : null;
 
       case 'phone':
-        return !validators.phone(value) ? `${field} must be a valid phone number` : null;
+        return !validators.phone(value) ? getUserFriendlyErrorMessage(field, 'phone') || `${field} must be in proper format` : null;
 
       case 'url':
-        return !validators.url(value) ? `${field} must be a valid URL` : null;
+        return !validators.url(value) ? getUserFriendlyErrorMessage(field, 'url') || `${field} must be a valid URL` : null;
 
       case 'string':
         return typeof value !== 'string' ? `${field} must be a string` : null;
@@ -380,10 +440,12 @@ class SchemaValidator {
           return `${field} must be a number`;
         }
         if (rules.min && Number(value) < rules.min) {
-          return `${field} must be at least ${rules.min}`;
+          const friendlyMsg = getUserFriendlyErrorMessage(field, 'range');
+          return friendlyMsg || `${field} must be at least ${rules.min}`;
         }
         if (rules.max && Number(value) > rules.max) {
-          return `${field} must not exceed ${rules.max}`;
+          const friendlyMsg = getUserFriendlyErrorMessage(field, 'range');
+          return friendlyMsg || `${field} must not exceed ${rules.max}`;
         }
         return null;
 
@@ -414,7 +476,18 @@ const validateBody = (schema) => {
     const { valid, errors } = validator.validate(req.body);
 
     if (!valid) {
-      throw new ValidationError('Request validation failed', errors);
+      // Transform errors to include field details for frontend error display
+      const fieldDetails = {};
+      Object.entries(errors).forEach(([field, errorMessages]) => {
+        fieldDetails[field] = {
+          valid: false,
+          message: errorMessages[0] || 'Invalid value',
+          errors: errorMessages
+        };
+      });
+      
+      const err = new ValidationError('Some fields need attention', fieldDetails);
+      throw err;
     }
 
     next();
