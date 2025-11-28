@@ -730,34 +730,46 @@ const commonSchemas = {
     },
   },
 
-  // ✅ PHASE 2 FIX 4: Onboarding complete schema with validation
+  // ✅ PHASE 2 FIX 4: Onboarding complete schema with validation (supports optional Shopify/Exotel)
   onboardingCompleteSchema: {
+    companyName: {
+      type: 'string',
+      required: false,
+    },
+    skipShopify: {
+      type: 'boolean',
+      required: false,
+    },
     shopifyStore: {
       type: 'url',
-      required: true,
+      required: false,
     },
     shopifyApiKey: {
       type: 'string',
-      required: true,
+      required: false,
       minLength: 32,
     },
     shopifyApiSecret: {
       type: 'string',
-      required: true,
+      required: false,
       minLength: 32,
+    },
+    skipExotel: {
+      type: 'boolean',
+      required: false,
     },
     exotelNumber: {
       type: 'phone',
-      required: true,
+      required: false,
     },
     exotelSid: {
       type: 'string',
-      required: true,
+      required: false,
       minLength: 5,
     },
     exotelToken: {
       type: 'string',
-      required: true,
+      required: false,
       minLength: 20,
     },
     returnWindowDays: {

@@ -79,14 +79,17 @@ router.get('/status', authMiddleware, async (req, res) => {
 });
 
 // POST - Complete onboarding setup
-// ✅ PHASE 2 FIX 4: Add input validation
+// ✅ PHASE 2 FIX 4: Add input validation (supports optional Shopify/Exotel with skip flags)
 router.post('/complete', authMiddleware, validateBody(commonSchemas.onboardingCompleteSchema), async (req, res) => {
   try {
     const client_id = req.user.client_id;
     const {
+      companyName,
+      skipShopify,
       shopifyStore,
       shopifyApiKey,
       shopifyApiSecret,
+      skipExotel,
       exotelNumber,
       exotelSid,
       exotelToken,
@@ -99,81 +102,93 @@ router.post('/complete', authMiddleware, validateBody(commonSchemas.onboardingCo
       enableEmail
     } = req.body;
 
-    // Note: validateBody middleware already validated required fields,
-    // but we still do credential validation below
+    const errors = {};
 
-    if (!shopifyStore) errors.shopifyStore = 'Store URL required';
-    if (!shopifyApiKey) errors.shopifyApiKey = 'API Key required';
-    if (!shopifyApiSecret) errors.shopifyApiSecret = 'API Secret required';
-    if (!exotelNumber) errors.exotelNumber = 'Phone number required';
-    if (!exotelSid) errors.exotelSid = 'Exotel SID required';
-    if (!exotelToken) errors.exotelToken = 'Exotel Token required';
+    // ✅ NEW: Validate Shopify only if not skipped
+    if (!skipShopify) {
+      if (!shopifyStore) errors.shopifyStore = 'Store URL required';
+      if (!shopifyApiKey) errors.shopifyApiKey = 'API Key required';
+      if (!shopifyApiSecret) errors.shopifyApiSecret = 'API Secret required';
+    }
+
+    // ✅ NEW: Validate Exotel only if not skipped
+    if (!skipExotel) {
+      if (!exotelNumber) errors.exotelNumber = 'Phone number required';
+      if (!exotelSid) errors.exotelSid = 'Exotel SID required';
+      if (!exotelToken) errors.exotelToken = 'Exotel Token required';
+    }
 
     if (Object.keys(errors).length > 0) {
       return res.status(400).json({ errors });
     }
 
-    // Validate Shopify credentials
-    logger.info('Validating Shopify credentials', { store: shopifyStore });
-    const shopifyValid = await validateShopifyCredentials(shopifyApiKey, shopifyApiSecret, shopifyStore);
-    
-    if (!shopifyValid) {
-      return res.status(400).json({ 
-        error: 'Invalid Shopify credentials. Please check your API Key and Secret.' 
-      });
+    // ✅ NEW: Validate Shopify credentials only if Shopify is configured
+    let encryptedShopifySecret = null;
+    if (!skipShopify && shopifyStore && shopifyApiKey && shopifyApiSecret) {
+      logger.info('Validating Shopify credentials', { store: shopifyStore });
+      const shopifyValid = await validateShopifyCredentials(shopifyApiKey, shopifyApiSecret, shopifyStore);
+      
+      if (!shopifyValid) {
+        return res.status(400).json({ 
+          error: 'Invalid Shopify credentials. Please check your API Key and Secret.' 
+        });
+      }
+      encryptedShopifySecret = encrypt(shopifyApiSecret);
     }
 
-    // Validate Exotel credentials
-    logger.info('Validating Exotel credentials', { sid: exotelSid });
-    const exotelValid = await validateExotelCredentials(exotelSid, exotelToken);
-    
-    if (!exotelValid) {
-      return res.status(400).json({ 
-        error: 'Invalid Exotel credentials. Please check your SID and Token.' 
-      });
+    // ✅ NEW: Validate Exotel credentials only if Exotel is configured
+    let encryptedExotelToken = null;
+    if (!skipExotel && exotelSid && exotelToken) {
+      logger.info('Validating Exotel credentials', { sid: exotelSid });
+      const exotelValid = await validateExotelCredentials(exotelSid, exotelToken);
+      
+      if (!exotelValid) {
+        return res.status(400).json({ 
+          error: 'Invalid Exotel credentials. Please check your SID and Token.' 
+        });
+      }
+      encryptedExotelToken = encrypt(exotelToken);
     }
-
-    // Encrypt sensitive data
-    const encryptedShopifySecret = encrypt(shopifyApiSecret);
-    const encryptedExotelToken = encrypt(exotelToken);
 
     // Update client with all configuration
     const query = `
       UPDATE clients 
       SET 
-        shopify_store = $1,
-        shopify_api_key = $2,
-        shopify_api_secret_encrypted = $3,
-        exotel_number = $4,
-        exotel_sid = $5,
-        exotel_token_encrypted = $6,
-        return_window_days = $7,
-        refund_auto_threshold = $8,
-        cancel_window_hours = $9,
-        escalation_threshold = $10,
-        enable_whatsapp = $11,
-        enable_sms = $12,
-        enable_email = $13,
+        company_name = COALESCE($1, company_name),
+        shopify_store = $2,
+        shopify_api_key = $3,
+        shopify_api_secret_encrypted = $4,
+        exotel_number = $5,
+        exotel_sid = $6,
+        exotel_token_encrypted = $7,
+        return_window_days = $8,
+        refund_auto_threshold = $9,
+        cancel_window_hours = $10,
+        escalation_threshold = $11,
+        enable_whatsapp = $12,
+        enable_sms = $13,
+        enable_email = $14,
         is_configured = true,
         onboarding_completed_at = NOW()
-      WHERE id = $14
+      WHERE id = $15
       RETURNING id, shopify_store, exotel_number
     `;
 
     const result = await db.query(query, [
-      shopifyStore,
-      shopifyApiKey,
+      companyName || null,
+      skipShopify ? null : shopifyStore,
+      skipShopify ? null : shopifyApiKey,
       encryptedShopifySecret,
-      exotelNumber,
-      exotelSid,
+      skipExotel ? null : exotelNumber,
+      skipExotel ? null : exotelSid,
       encryptedExotelToken,
-      returnWindowDays,
-      refundAutoThreshold,
-      cancelWindowHours,
-      escalationThreshold,
-      enableWhatsApp,
-      enableSMS,
-      enableEmail,
+      returnWindowDays || 14,
+      refundAutoThreshold || 2000,
+      cancelWindowHours || 24,
+      escalationThreshold || 60,
+      enableWhatsApp || false,
+      enableSMS !== false,
+      enableEmail !== false,
       client_id
     ]);
 
@@ -183,8 +198,10 @@ router.post('/complete', authMiddleware, validateBody(commonSchemas.onboardingCo
 
     logger.info('Onboarding completed', { 
       client_id, 
-      store: shopifyStore,
-      exotel_number: exotelNumber 
+      skipShopify,
+      skipExotel,
+      store: skipShopify ? 'SKIPPED' : shopifyStore,
+      exotel_number: skipExotel ? 'SKIPPED' : exotelNumber
     });
 
     res.json({
