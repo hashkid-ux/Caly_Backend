@@ -154,13 +154,13 @@ router.post('/complete', authMiddleware, validateBody(commonSchemas.onboardingCo
     const query = `
       UPDATE clients 
       SET 
-        company_name = COALESCE($1, company_name),
-        shopify_store = $2,
+        name = COALESCE($1, name),
+        shopify_store_url = $2,
         shopify_api_key = $3,
-        shopify_api_secret_encrypted = $4,
+        shopify_api_secret = $4,
         exotel_number = $5,
         exotel_sid = $6,
-        exotel_token_encrypted = $7,
+        exotel_token = $7,
         return_window_days = $8,
         refund_auto_threshold = $9,
         cancel_window_hours = $10,
@@ -168,20 +168,19 @@ router.post('/complete', authMiddleware, validateBody(commonSchemas.onboardingCo
         enable_whatsapp = $12,
         enable_sms = $13,
         enable_email = $14,
-        is_configured = true,
-        onboarding_completed_at = NOW()
+        updated_at = NOW()
       WHERE id = $15
-      RETURNING id, shopify_store, exotel_number
+      RETURNING id, shopify_store_url, exotel_number
     `;
 
     const result = await db.query(query, [
       companyName || null,
       skipShopify ? null : shopifyStore,
       skipShopify ? null : shopifyApiKey,
-      encryptedShopifySecret,
+      skipShopify ? null : encryptedShopifySecret,
       skipExotel ? null : exotelNumber,
       skipExotel ? null : exotelSid,
-      encryptedExotelToken,
+      skipExotel ? null : encryptedExotelToken,
       returnWindowDays || 14,
       refundAutoThreshold || 2000,
       cancelWindowHours || 24,
