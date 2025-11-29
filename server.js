@@ -357,6 +357,7 @@ app.use('/api/analytics', authMiddleware, require(resolve('routes/analyticsEnhan
 app.use('/api/calls', authMiddleware, require(resolve('routes/livecalls')));
 app.use('/api/clients', authMiddleware, require(resolve('routes/clients'))); // Multi-tenancy + dashboard route
 app.use('/api/recordings', authMiddleware, require(resolve('routes/recordings'))); // Call recordings from Wasabi
+app.use('/api/sector', authMiddleware, require(resolve('routes/sectorConfig'))); // Sector configuration management
 
 // Dashboard endpoint (from clients route)
 app.get('/api/analytics/dashboard', authMiddleware, async (req, res) => {
