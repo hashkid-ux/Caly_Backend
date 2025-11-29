@@ -5,7 +5,7 @@ const resolve = require('../utils/moduleResolver');
 const db = require(resolve('db/postgres'));
 const logger = require(resolve('utils/logger'));
 const Pagination = require(resolve('utils/pagination'));
-const authMiddleware = require(resolve('auth/authMiddleware'));
+const { authMiddleware } = require(resolve('auth/authMiddleware'));
 
 // GET /api/calls - List all calls (MULTI-TENANT: filtered by user's client_id)
 router.get('/', authMiddleware, async (req, res) => {
