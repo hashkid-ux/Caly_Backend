@@ -218,22 +218,25 @@ class AgentOrchestratorV2 extends EventEmitter {
         await this.cancelAgent(callId);
       }
 
-      // Launch new agent instance
+      // Launch new agent instance with client context
       const AgentClass = availableAgents[agentType];
-      const agent = new AgentClass(callId, initialData);
+      const clientId = initialData.client_id; // ✅ MULTI-TENANCY: Pass client context
+      const agent = new AgentClass(callId, initialData, clientId);
 
       // Track active agent
       this.activeAgents.set(callId, {
         agent,
         state: 'active',
         startTime: Date.now(),
-        sector
+        sector,
+        clientId // ✅ MULTI-TENANCY: Track client context
       });
 
       logger.info('🚀 [Orchestrator] Agent launched', { 
         callId, 
         agentType, 
         sector,
+        clientId, // ✅ MULTI-TENANCY: Log client context
         activeAgents: this.activeAgents.size 
       });
 

@@ -7,9 +7,10 @@ const logger = require(resolve('utils/logger'));
 const AGENT_TIMEOUT_MS = 30000;
 
 class BaseAgent extends EventEmitter {
-  constructor(callId, initialData = {}) {
+  constructor(callId, initialData = {}, clientId = null) {
     super();
     this.callId = callId;
+    this.clientId = clientId || initialData.client_id; // ✅ MULTI-TENANCY: Store client context
     this.data = initialData;
     this.state = 'INITIALIZING';
     this.requiredFields = []; // Override in subclass

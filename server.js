@@ -355,12 +355,23 @@ app.use('/api/actions', authMiddleware, require(resolve('routes/actions')));
 app.use('/api/analytics', authMiddleware, require(resolve('routes/analytics')));
 app.use('/api/analytics', authMiddleware, require(resolve('routes/analyticsEnhanced')));
 app.use('/api/analytics', authMiddleware, require(resolve('routes/analyticsRealData'))); // Real data from backend
+
+// ✅ PHASE 7: Advanced Analytics & Performance Optimization Routes
+app.use('/api/analytics', authMiddleware, require(resolve('routes/analyticsPerformance'))); // Performance metrics
+app.use('/api/analytics', authMiddleware, require(resolve('routes/analyticsQuality'))); // Call quality & metrics
+app.use('/api/analytics', authMiddleware, require(resolve('routes/analyticsSatisfaction'))); // Satisfaction & sentiment
+app.use('/api/analytics', authMiddleware, require(resolve('routes/analyticsRevenue'))); // Revenue & cost analysis
+app.use('/api/analytics', authMiddleware, require(resolve('routes/predictions'))); // Predictions & forecasts
+app.use('/api/analytics', authMiddleware, require(resolve('routes/reports'))); // Report generation
+app.use('/api/metrics', authMiddleware, require(resolve('routes/metricsLive'))); // Real-time metrics & health
+
 app.use('/api/calls', authMiddleware, require(resolve('routes/livecalls')));
 app.use('/api/clients', authMiddleware, require(resolve('routes/clients'))); // Multi-tenancy + dashboard route
 app.use('/api/recordings', authMiddleware, require(resolve('routes/recordings'))); // Call recordings from Wasabi
 app.use('/api/sector', authMiddleware, require(resolve('routes/sectorConfig'))); // Sector configuration management
 app.use('/api/teams', authMiddleware, require(resolve('routes/teamsRoutes'))); // Teams management - sector-based organization
 app.use('/api/settings', authMiddleware, require(resolve('routes/settingsRoutes'))); // Company settings & business rules
+app.use('/api/channels', authMiddleware, require(resolve('routes/channelsRoutes'))); // Multi-channel configuration (SMS, Email, Voice, etc)
 
 // Dashboard endpoint (from clients route)
 app.get('/api/analytics/dashboard', authMiddleware, async (req, res) => {
@@ -625,6 +636,26 @@ async function startApplication() {
           });
         }
       }, CLEANUP_INTERVAL);
+
+      // ✅ PHASE 3 FIX 3.3: Initialize Agent Router
+      // Loads agents from database and provides intelligent routing
+      const agentRouter = require('./services/agentRouter');
+      try {
+        await agentRouter.initialize();
+        logger.info('✅ Agent Router initialized');
+      } catch (error) {
+        logger.warn('⚠️  Agent Router initialization failed', { error: error.message });
+      }
+
+      // ✅ PHASE 3 FIX 3.4: Initialize Performance Aggregator
+      // Tracks and aggregates agent & team performance metrics
+      const performanceAggregator = require('./services/performanceAggregator');
+      try {
+        performanceAggregator.start();
+        logger.info('✅ Performance Aggregator started');
+      } catch (error) {
+        logger.warn('⚠️  Performance Aggregator startup failed', { error: error.message });
+      }
 
       logger.info('🎉 Application ready to handle requests');
     });
