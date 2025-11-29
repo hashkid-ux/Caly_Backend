@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
+const { authMiddleware } = require('../auth/authMiddleware');
 const db = require('../db');
 
 /**
@@ -12,7 +12,7 @@ const db = require('../db');
  * GET /api/settings/company/{clientId}
  * Fetch all company settings and business configuration
  */
-router.get('/company/:clientId', authenticateToken, async (req, res) => {
+router.get('/company/:clientId', authMiddleware, async (req, res) => {
   try {
     const { clientId } = req.params;
 
@@ -122,7 +122,7 @@ router.get('/company/:clientId', authenticateToken, async (req, res) => {
  * PUT /api/settings/company/{clientId}
  * Update company settings and business rules
  */
-router.put('/company/:clientId', authenticateToken, async (req, res) => {
+router.put('/company/:clientId', authMiddleware, async (req, res) => {
   try {
     const { clientId } = req.params;
     const { company, businessRules, channels, localization } = req.body;
@@ -223,7 +223,7 @@ router.put('/company/:clientId', authenticateToken, async (req, res) => {
  * GET /api/settings/business-rules/{clientId}
  * Get all business rules for this company
  */
-router.get('/business-rules/:clientId', authenticateToken, async (req, res) => {
+router.get('/business-rules/:clientId', authMiddleware, async (req, res) => {
   try {
     const { clientId } = req.params;
 
@@ -278,7 +278,7 @@ router.get('/business-rules/:clientId', authenticateToken, async (req, res) => {
  * GET /api/settings/sectors/{clientId}
  * Get all available sectors and their status for this company
  */
-router.get('/sectors/:clientId', authenticateToken, async (req, res) => {
+router.get('/sectors/:clientId', authMiddleware, async (req, res) => {
   try {
     const { clientId } = req.params;
 

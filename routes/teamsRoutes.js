@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
+const { authMiddleware } = require('../auth/authMiddleware');
 const db = require('../db');
 
 /**
@@ -20,7 +20,7 @@ const db = require('../db');
  * Get all teams with optional filtering
  * Query: ?sector=healthcare&status=active
  */
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const { sector, status } = req.query;
     let query = 'SELECT t.*, COUNT(DISTINCT tm.id) as member_count, AVG(tp.avg_rating) as avg_rating FROM teams t LEFT JOIN team_members tm ON t.id = tm.team_id LEFT JOIN team_performance tp ON t.id = tp.team_id WHERE 1=1';
@@ -55,7 +55,7 @@ router.get('/', authenticateToken, async (req, res) => {
  * GET /api/teams/:id
  * Get team details with members and agents
  */
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -99,7 +99,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
  * GET /api/teams/:id/members
  * Get all members in a team with their agent assignments
  */
-router.get('/:id/members', authenticateToken, async (req, res) => {
+router.get('/:id/members', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -129,7 +129,7 @@ router.get('/:id/members', authenticateToken, async (req, res) => {
  * GET /api/teams/:id/performance
  * Get team performance metrics and trends
  */
-router.get('/:id/performance', authenticateToken, async (req, res) => {
+router.get('/:id/performance', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const { days = 30 } = req.query;
@@ -170,7 +170,7 @@ router.get('/:id/performance', authenticateToken, async (req, res) => {
  * Create a new team
  * Body: { name, sector, lead_id, description }
  */
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
   try {
     const { name, sector, lead_id, description } = req.body;
 
@@ -219,7 +219,7 @@ router.post('/', authenticateToken, async (req, res) => {
  * Add a member to a team
  * Body: { user_id, title, role }
  */
-router.post('/:id/members', authenticateToken, async (req, res) => {
+router.post('/:id/members', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const { user_id, title, role } = req.body;
@@ -264,7 +264,7 @@ router.post('/:id/members', authenticateToken, async (req, res) => {
  * Assign agents to a team member
  * Body: { team_member_id, agent_ids: [], proficiency_levels: [] }
  */
-router.post('/:id/agents', authenticateToken, async (req, res) => {
+router.post('/:id/agents', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const { team_member_id, agent_ids, proficiency_levels } = req.body;
@@ -326,7 +326,7 @@ router.post('/:id/agents', authenticateToken, async (req, res) => {
  * Update team information
  * Body: { name, sector, lead_id, description, status }
  */
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, sector, lead_id, description, status } = req.body;
@@ -399,7 +399,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
  * Update team member information
  * Body: { title, role }
  */
-router.put('/:id/members/:memberId', authenticateToken, async (req, res) => {
+router.put('/:id/members/:memberId', authMiddleware, async (req, res) => {
   try {
     const { id, memberId } = req.params;
     const { title, role } = req.body;
@@ -465,7 +465,7 @@ router.put('/:id/members/:memberId', authenticateToken, async (req, res) => {
  * DELETE /api/teams/:id
  * Delete a team (soft delete - sets status to inactive)
  */
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -495,7 +495,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
  * DELETE /api/teams/:id/members/:memberId
  * Remove a member from a team
  */
-router.delete('/:id/members/:memberId', authenticateToken, async (req, res) => {
+router.delete('/:id/members/:memberId', authMiddleware, async (req, res) => {
   try {
     const { id, memberId } = req.params;
 
@@ -538,7 +538,7 @@ router.delete('/:id/members/:memberId', authenticateToken, async (req, res) => {
  * DELETE /api/teams/:id/agents/:assignmentId
  * Unassign an agent from a team member
  */
-router.delete('/:id/agents/:assignmentId', authenticateToken, async (req, res) => {
+router.delete('/:id/agents/:assignmentId', authMiddleware, async (req, res) => {
   try {
     const { assignmentId } = req.params;
 

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
+const { authMiddleware } = require('../auth/authMiddleware');
 const db = require('../db');
 
 /**
@@ -14,7 +14,7 @@ const db = require('../db');
  * Real Key Performance Indicators
  * Query: ?clientId={id}&sector={sector}&days=7|30|90
  */
-router.get('/kpis', authenticateToken, async (req, res) => {
+router.get('/kpis', authMiddleware, async (req, res) => {
   try {
     const { clientId, sector, days = 7 } = req.query;
 
@@ -206,7 +206,7 @@ router.get('/kpis', authenticateToken, async (req, res) => {
  * GET /api/analytics/summary
  * Quick summary for dashboard widgets
  */
-router.get('/summary', authenticateToken, async (req, res) => {
+router.get('/summary', authMiddleware, async (req, res) => {
   try {
     const { clientId } = req.query;
 
