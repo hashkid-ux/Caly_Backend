@@ -17,13 +17,60 @@ router.get('/', async (req, res) => {
 
     const { 
       resolved,
-      phone_from
+      phone_from,
+      sector,
+      agent,
+      status,
+      days,
+      search
     } = req.query;
 
     let query = 'SELECT * FROM calls WHERE client_id = $1';
     const params = [userClientId];
     let paramIndex = 2;
 
+    // Filter by resolved/failed status
+    if (status === 'completed') {
+      query += ` AND resolved = $${paramIndex}`;
+      params.push(true);
+      paramIndex++;
+    } else if (status === 'escalated') {
+      query += ` AND escalated = $${paramIndex}`;
+      params.push(true);
+      paramIndex++;
+    } else if (status === 'failed') {
+      query += ` AND failed = $${paramIndex}`;
+      params.push(true);
+      paramIndex++;
+    }
+
+    // Filter by sector
+    if (sector) {
+      query += ` AND sector = $${paramIndex}`;
+      params.push(sector);
+      paramIndex++;
+    }
+
+    // Filter by agent type
+    if (agent) {
+      query += ` AND agent_type = $${paramIndex}`;
+      params.push(agent);
+      paramIndex++;
+    }
+
+    // Filter by date range (days)
+    if (days) {
+      query += ` AND start_ts >= NOW() - INTERVAL '${parseInt(days)} days'`;
+    }
+
+    // Search by caller name or phone
+    if (search) {
+      query += ` AND (customer_name ILIKE $${paramIndex} OR customer_phone ILIKE $${paramIndex})`;
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    // Legacy filters
     if (resolved !== undefined) {
       query += ` AND resolved = $${paramIndex}`;
       params.push(resolved === 'true');
@@ -46,6 +93,42 @@ router.get('/', async (req, res) => {
     const countParams = [userClientId];
     let countParamIndex = 2;
 
+    if (status === 'completed') {
+      countQuery += ` AND resolved = $${countParamIndex}`;
+      countParams.push(true);
+      countParamIndex++;
+    } else if (status === 'escalated') {
+      countQuery += ` AND escalated = $${countParamIndex}`;
+      countParams.push(true);
+      countParamIndex++;
+    } else if (status === 'failed') {
+      countQuery += ` AND failed = $${countParamIndex}`;
+      countParams.push(true);
+      countParamIndex++;
+    }
+
+    if (sector) {
+      countQuery += ` AND sector = $${countParamIndex}`;
+      countParams.push(sector);
+      countParamIndex++;
+    }
+
+    if (agent) {
+      countQuery += ` AND agent_type = $${countParamIndex}`;
+      countParams.push(agent);
+      countParamIndex++;
+    }
+
+    if (days) {
+      countQuery += ` AND start_ts >= NOW() - INTERVAL '${parseInt(days)} days'`;
+    }
+
+    if (search) {
+      countQuery += ` AND (customer_name ILIKE $${countParamIndex} OR customer_phone ILIKE $${countParamIndex})`;
+      countParams.push(`%${search}%`);
+      countParamIndex++;
+    }
+
     if (resolved !== undefined) {
       countQuery += ` AND resolved = $${countParamIndex}`;
       countParams.push(resolved === 'true');
@@ -55,13 +138,15 @@ router.get('/', async (req, res) => {
     if (phone_from) {
       countQuery += ` AND phone_from = $${countParamIndex}`;
       countParams.push(phone_from);
+      countParamIndex++;
     }
 
     const countResult = await db.query(countQuery, countParams);
     const total = parseInt(countResult.rows[0].count);
 
     res.json({
-      calls: result.rows,
+      data: result.rows,
+      total,
       ...pagination.getMetadata(total),
     });
 
