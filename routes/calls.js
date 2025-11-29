@@ -35,33 +35,17 @@ router.get('/', authMiddleware, async (req, res) => {
     let paramCount = 2;
     let whereConditions = ['client_id = $1'];
 
-    // Add sector filter
-    if (sector && sector.trim()) {
-      whereConditions.push(`sector = $${paramCount}`);
-      queryParams.push(sector.trim());
-      paramCount++;
-    }
-
-    // Add agent filter
-    if (agent && agent.trim()) {
-      whereConditions.push(`agent_type = $${paramCount}`);
-      queryParams.push(agent.trim());
-      paramCount++;
-    }
-
-    // Add status filter
+    // Add status/resolved filter
     if (status && status.trim()) {
       if (status === 'completed') {
         whereConditions.push(`resolved = $${paramCount}`);
         queryParams.push(true);
-      } else if (status === 'escalated') {
-        whereConditions.push(`escalated = $${paramCount}`);
-        queryParams.push(true);
-      } else if (status === 'failed') {
-        whereConditions.push(`failed = $${paramCount}`);
-        queryParams.push(true);
+        paramCount++;
+      } else if (status === 'unresolved') {
+        whereConditions.push(`resolved = $${paramCount}`);
+        queryParams.push(false);
+        paramCount++;
       }
-      paramCount++;
     }
 
     // Add date range filter (not parameterized - it's a literal)
@@ -70,11 +54,11 @@ router.get('/', authMiddleware, async (req, res) => {
       whereConditions.push(`start_ts >= NOW() - INTERVAL '${daysInt} days'`);
     }
 
-    // Add search filter
+    // Add search filter - search in phone_from, phone_to, transcript_full
     if (search && search.trim()) {
       const searchTerm = `%${search.trim()}%`;
       whereConditions.push(
-        `(customer_name ILIKE $${paramCount} OR customer_phone ILIKE $${paramCount} OR phone_from ILIKE $${paramCount})`
+        `(phone_from ILIKE $${paramCount} OR phone_to ILIKE $${paramCount} OR transcript_full ILIKE $${paramCount})`
       );
       queryParams.push(searchTerm);
       paramCount++;
@@ -106,19 +90,16 @@ router.get('/', authMiddleware, async (req, res) => {
       SELECT 
         id,
         client_id,
+        call_sid,
+        phone_from,
+        phone_to,
         start_ts,
         end_ts,
         duration_seconds,
-        customer_name,
-        customer_phone,
-        phone_from,
-        agent_type,
-        sector,
-        call_status,
+        transcript_full,
         recording_url,
-        transcript,
         resolved,
-        satisfaction_score,
+        customer_satisfaction,
         created_at,
         updated_at
       FROM calls 
