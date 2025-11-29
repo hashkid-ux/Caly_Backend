@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../auth/authMiddleware');
-const db = require('../db');
+const db = require('../db/postgres');
 
 /**
  * Settings Routes - Company Configuration & Business Rules
