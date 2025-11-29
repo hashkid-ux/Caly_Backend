@@ -23,6 +23,9 @@ CREATE TABLE IF NOT EXISTS clients (
   email TEXT UNIQUE NOT NULL,
   phone TEXT,
   
+  -- ✅ SECTOR EXPANSION: Add sector field
+  sector VARCHAR(50) DEFAULT 'ecommerce', -- ecommerce|healthcare|realestate|logistics|fintech|support|telecom|government|education|saas|custom
+  
   -- Shopify Integration
   shopify_store_url TEXT UNIQUE,
   shopify_api_key TEXT,
@@ -40,7 +43,7 @@ CREATE TABLE IF NOT EXISTS clients (
   -- WhatsApp Business (future)
   whatsapp_business_id TEXT,
   
-  -- Business Rules
+  -- Business Rules (E-commerce defaults, overridable per sector)
   return_window_days INTEGER DEFAULT 14,
   refund_auto_threshold INTEGER DEFAULT 2000,
   cancel_window_hours INTEGER DEFAULT 24,
@@ -55,6 +58,66 @@ CREATE TABLE IF NOT EXISTS clients (
   active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ✅ SECTOR EXPANSION: Create sector_configurations table
+CREATE TABLE IF NOT EXISTS sector_configurations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  sector VARCHAR(50) NOT NULL, -- Denormalized for efficiency
+  
+  -- Generic config JSON (flexible per sector)
+  -- E-commerce: {return_window_days, refund_threshold, cancel_window_hours}
+  -- Healthcare: {appointment_buffer_mins, escalation_wait_time, hipaa_enabled}
+  -- Real Estate: {followup_window_hours, showing_duration_mins, offer_expiry_hours}
+  -- Logistics: {delivery_attempt_limit, address_clarification_threshold}
+  -- Fintech: {transaction_verification_timeout, fraud_alert_threshold}
+  config JSONB DEFAULT '{}',
+  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(client_id, sector)
+);
+
+-- ✅ SECTOR EXPANSION: Create sector_agents table (maps which agents are available per sector)
+CREATE TABLE IF NOT EXISTS sector_agents (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sector VARCHAR(50) NOT NULL,
+  agent_type VARCHAR(100) NOT NULL, -- e.g., OrderStatusAgent, AppointmentBookingAgent, PropertyInquiryAgent
+  agent_class VARCHAR(255) NOT NULL, -- Full class name for dynamic loading
+  enabled BOOLEAN DEFAULT TRUE,
+  priority INTEGER DEFAULT 100, -- Lower = higher priority for intent matching
+  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(sector, agent_type)
+);
+
+-- ✅ SECTOR EXPANSION: Create sector_entities table (defines entity types per sector)
+CREATE TABLE IF NOT EXISTS sector_entities (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sector VARCHAR(50) NOT NULL,
+  entity_type VARCHAR(100) NOT NULL, -- e.g., order_id, patient_id, property_id, parcel_id
+  description TEXT,
+  extraction_hints TEXT[], -- Helper text for NER (Named Entity Recognition)
+  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(sector, entity_type)
+);
+
+-- ✅ SECTOR EXPANSION: Create sector_intent_patterns table (intent detection patterns per sector)
+CREATE TABLE IF NOT EXISTS sector_intent_patterns (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sector VARCHAR(50) NOT NULL,
+  intent VARCHAR(100) NOT NULL, -- e.g., BOOK_APPOINTMENT, TRACK_ORDER, PROPERTY_INQUIRY
+  language VARCHAR(10) NOT NULL DEFAULT 'en', -- en, hi, es, fr, etc.
+  regex_pattern TEXT NOT NULL, -- RegEx for pattern matching
+  examples TEXT[], -- Example phrases that match
+  priority INTEGER DEFAULT 100,
+  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(sector, intent, language)
 );
 
 -- Users table: User accounts with passwords (one-to-many with clients)
@@ -178,6 +241,12 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_call_id ON audit_logs(call_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_client_id ON audit_logs(client_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
 CREATE INDEX IF NOT EXISTS idx_agent_metrics_client_date ON agent_metrics(client_id, date);
+
+-- ✅ SECTOR EXPANSION: Indexes for new sector tables
+CREATE INDEX IF NOT EXISTS idx_sector_configs_client_id ON sector_configurations(client_id, sector);
+CREATE INDEX IF NOT EXISTS idx_sector_agents_sector ON sector_agents(sector, enabled);
+CREATE INDEX IF NOT EXISTS idx_sector_entities_sector ON sector_entities(sector);
+CREATE INDEX IF NOT EXISTS idx_sector_intent_patterns_sector_intent ON sector_intent_patterns(sector, intent, language);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column() 
