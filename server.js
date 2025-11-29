@@ -354,11 +354,13 @@ app.use('/api/calls', authMiddleware, require(resolve('routes/calls')));
 app.use('/api/actions', authMiddleware, require(resolve('routes/actions')));
 app.use('/api/analytics', authMiddleware, require(resolve('routes/analytics')));
 app.use('/api/analytics', authMiddleware, require(resolve('routes/analyticsEnhanced')));
+app.use('/api/analytics', authMiddleware, require(resolve('routes/analyticsRealData'))); // Real data from backend
 app.use('/api/calls', authMiddleware, require(resolve('routes/livecalls')));
 app.use('/api/clients', authMiddleware, require(resolve('routes/clients'))); // Multi-tenancy + dashboard route
 app.use('/api/recordings', authMiddleware, require(resolve('routes/recordings'))); // Call recordings from Wasabi
 app.use('/api/sector', authMiddleware, require(resolve('routes/sectorConfig'))); // Sector configuration management
 app.use('/api/teams', authMiddleware, require(resolve('routes/teamsRoutes'))); // Teams management - sector-based organization
+app.use('/api/settings', authMiddleware, require(resolve('routes/settingsRoutes'))); // Company settings & business rules
 
 // Dashboard endpoint (from clients route)
 app.get('/api/analytics/dashboard', authMiddleware, async (req, res) => {
