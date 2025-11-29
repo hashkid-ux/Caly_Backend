@@ -5,154 +5,151 @@ const resolve = require('../utils/moduleResolver');
 const db = require(resolve('db/postgres'));
 const logger = require(resolve('utils/logger'));
 const Pagination = require(resolve('utils/pagination'));
+const authMiddleware = require(resolve('auth/authMiddleware'));
 
 // GET /api/calls - List all calls (MULTI-TENANT: filtered by user's client_id)
-router.get('/', async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
     // CRITICAL: User can only see their own company's calls
     const userClientId = req.user.client_id;
     
-    // Use pagination utility
-    const pagination = Pagination.fromQuery(req.query);
-
-    const { 
-      resolved,
-      phone_from,
+    // Extract query parameters
+    const {
+      limit = 50,
+      offset = 0,
       sector,
       agent,
       status,
       days,
-      search
+      search,
+      resolved,
+      phone_from
     } = req.query;
 
-    let query = 'SELECT * FROM calls WHERE client_id = $1';
-    const params = [userClientId];
-    let paramIndex = 2;
+    // Validate pagination inputs
+    const pageLimit = Math.min(parseInt(limit) || 50, 500);
+    const pageOffset = Math.max(parseInt(offset) || 0, 0);
 
-    // Filter by resolved/failed status
-    if (status === 'completed') {
-      query += ` AND resolved = $${paramIndex}`;
-      params.push(true);
-      paramIndex++;
-    } else if (status === 'escalated') {
-      query += ` AND escalated = $${paramIndex}`;
-      params.push(true);
-      paramIndex++;
-    } else if (status === 'failed') {
-      query += ` AND failed = $${paramIndex}`;
-      params.push(true);
-      paramIndex++;
+    // Start building query parameters with client_id
+    let queryParams = [userClientId];
+    let paramCount = 2;
+    let whereConditions = ['client_id = $1'];
+
+    // Add sector filter
+    if (sector && sector.trim()) {
+      whereConditions.push(`sector = $${paramCount}`);
+      queryParams.push(sector.trim());
+      paramCount++;
     }
 
-    // Filter by sector
-    if (sector) {
-      query += ` AND sector = $${paramIndex}`;
-      params.push(sector);
-      paramIndex++;
+    // Add agent filter
+    if (agent && agent.trim()) {
+      whereConditions.push(`agent_type = $${paramCount}`);
+      queryParams.push(agent.trim());
+      paramCount++;
     }
 
-    // Filter by agent type
-    if (agent) {
-      query += ` AND agent_type = $${paramIndex}`;
-      params.push(agent);
-      paramIndex++;
+    // Add status filter
+    if (status && status.trim()) {
+      if (status === 'completed') {
+        whereConditions.push(`resolved = $${paramCount}`);
+        queryParams.push(true);
+      } else if (status === 'escalated') {
+        whereConditions.push(`escalated = $${paramCount}`);
+        queryParams.push(true);
+      } else if (status === 'failed') {
+        whereConditions.push(`failed = $${paramCount}`);
+        queryParams.push(true);
+      }
+      paramCount++;
     }
 
-    // Filter by date range (days)
+    // Add date range filter (not parameterized - it's a literal)
     if (days) {
-      query += ` AND start_ts >= NOW() - INTERVAL '${parseInt(days)} days'`;
+      const daysInt = Math.min(Math.max(parseInt(days) || 7, 1), 365);
+      whereConditions.push(`start_ts >= NOW() - INTERVAL '${daysInt} days'`);
     }
 
-    // Search by caller name or phone
-    if (search) {
-      query += ` AND (customer_name ILIKE $${paramIndex} OR customer_phone ILIKE $${paramIndex})`;
-      params.push(`%${search}%`);
-      paramIndex++;
+    // Add search filter
+    if (search && search.trim()) {
+      const searchTerm = `%${search.trim()}%`;
+      whereConditions.push(
+        `(customer_name ILIKE $${paramCount} OR customer_phone ILIKE $${paramCount} OR phone_from ILIKE $${paramCount})`
+      );
+      queryParams.push(searchTerm);
+      paramCount++;
     }
 
-    // Legacy filters
+    // Legacy resolved filter
     if (resolved !== undefined) {
-      query += ` AND resolved = $${paramIndex}`;
-      params.push(resolved === 'true');
-      paramIndex++;
+      whereConditions.push(`resolved = $${paramCount}`);
+      queryParams.push(resolved === 'true');
+      paramCount++;
     }
 
+    // Legacy phone_from filter
     if (phone_from) {
-      query += ` AND phone_from = $${paramIndex}`;
-      params.push(phone_from);
-      paramIndex++;
+      whereConditions.push(`phone_from = $${paramCount}`);
+      queryParams.push(phone_from);
+      paramCount++;
     }
 
-    query += ` ORDER BY start_ts DESC${pagination.applySql()}`;
-    params.push(pagination.limit, pagination.offset);
-
-    const result = await db.query(query, params);
+    const whereClause = whereConditions.join(' AND ');
 
     // Get total count - also filtered by client_id
-    let countQuery = 'SELECT COUNT(*) FROM calls WHERE client_id = $1';
-    const countParams = [userClientId];
-    let countParamIndex = 2;
+    const countQuery = `SELECT COUNT(*) as total FROM calls WHERE ${whereClause}`;
+    const countResult = await db.query(countQuery, queryParams.slice(0, paramCount - 1));
+    const total = parseInt(countResult.rows[0]?.total || 0);
 
-    if (status === 'completed') {
-      countQuery += ` AND resolved = $${countParamIndex}`;
-      countParams.push(true);
-      countParamIndex++;
-    } else if (status === 'escalated') {
-      countQuery += ` AND escalated = $${countParamIndex}`;
-      countParams.push(true);
-      countParamIndex++;
-    } else if (status === 'failed') {
-      countQuery += ` AND failed = $${countParamIndex}`;
-      countParams.push(true);
-      countParamIndex++;
-    }
+    // Fetch calls with pagination
+    const dataQuery = `
+      SELECT 
+        id,
+        client_id,
+        start_ts,
+        end_ts,
+        duration_seconds,
+        customer_name,
+        customer_phone,
+        phone_from,
+        agent_type,
+        sector,
+        call_status,
+        recording_url,
+        transcript,
+        resolved,
+        satisfaction_score,
+        created_at,
+        updated_at
+      FROM calls 
+      WHERE ${whereClause}
+      ORDER BY start_ts DESC
+      LIMIT $${paramCount} OFFSET $${paramCount + 1}
+    `;
 
-    if (sector) {
-      countQuery += ` AND sector = $${countParamIndex}`;
-      countParams.push(sector);
-      countParamIndex++;
-    }
+    // Add limit and offset
+    const finalParams = [...queryParams.slice(0, paramCount - 1), pageLimit, pageOffset];
+    
+    const result = await db.query(dataQuery, finalParams);
 
-    if (agent) {
-      countQuery += ` AND agent_type = $${countParamIndex}`;
-      countParams.push(agent);
-      countParamIndex++;
-    }
-
-    if (days) {
-      countQuery += ` AND start_ts >= NOW() - INTERVAL '${parseInt(days)} days'`;
-    }
-
-    if (search) {
-      countQuery += ` AND (customer_name ILIKE $${countParamIndex} OR customer_phone ILIKE $${countParamIndex})`;
-      countParams.push(`%${search}%`);
-      countParamIndex++;
-    }
-
-    if (resolved !== undefined) {
-      countQuery += ` AND resolved = $${countParamIndex}`;
-      countParams.push(resolved === 'true');
-      countParamIndex++;
-    }
-
-    if (phone_from) {
-      countQuery += ` AND phone_from = $${countParamIndex}`;
-      countParams.push(phone_from);
-      countParamIndex++;
-    }
-
-    const countResult = await db.query(countQuery, countParams);
-    const total = parseInt(countResult.rows[0].count);
-
+    // Return success response
     res.json({
-      data: result.rows,
-      total,
-      ...pagination.getMetadata(total),
+      success: true,
+      data: result.rows || [],
+      total: total,
+      page: Math.floor(pageOffset / pageLimit) + 1,
+      pages: Math.ceil(total / pageLimit),
+      limit: pageLimit,
+      offset: pageOffset
     });
 
   } catch (error) {
     logger.error('Error fetching calls', { error: error.message, userId: req.user?.id });
-    res.status(500).json({ error: 'Failed to fetch calls' });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch calls',
+      message: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
+    });
   }
 });
 
