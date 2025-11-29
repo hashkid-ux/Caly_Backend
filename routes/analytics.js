@@ -4,11 +4,13 @@ const router = express.Router();
 const resolve = require('../utils/moduleResolver');
 const db = require(resolve('db/postgres'));
 const logger = require(resolve('utils/logger'));
+const { authMiddleware } = require(resolve('auth/authMiddleware'));
 
 // GET /api/analytics/kpis - Get key performance indicators (MULTI-TENANT: filtered by user's company)
-router.get('/kpis', async (req, res) => {
+router.get('/kpis', authMiddleware, async (req, res) => {
   try {
     // CRITICAL: User can only see their own company's analytics
+    // Fixed: authMiddleware now applied - req.user is guaranteed to exist
     const userClientId = req.user.client_id;
     const { start_date, end_date } = req.query;
 
@@ -84,19 +86,16 @@ router.get('/kpis', async (req, res) => {
 });
 
 // GET /api/analytics/hourly - Hourly call volume
-router.get('/hourly', async (req, res) => {
+router.get('/hourly', authMiddleware, async (req, res) => {
   try {
-    const { client_id, date } = req.query;
+    // SECURITY FIX: Use authenticated user's client_id, NOT query parameter
+    // This prevents multi-tenancy bypass where users could query other companies' data
+    const { date } = req.query;  // date parameter still allowed, but NOT client_id
+    const userClientId = req.user.client_id;
 
-    let whereClause = 'WHERE 1=1';
-    const params = [];
-    let paramIndex = 1;
-
-    if (client_id) {
-      whereClause += ` AND client_id = $${paramIndex}`;
-      params.push(client_id);
-      paramIndex++;
-    }
+    let whereClause = 'WHERE client_id = $1';
+    const params = [userClientId];
+    let paramIndex = 2;
 
     if (date) {
       whereClause += ` AND DATE(start_ts) = $${paramIndex}`;
@@ -127,19 +126,16 @@ router.get('/hourly', async (req, res) => {
 });
 
 // GET /api/analytics/daily - Daily trends
-router.get('/daily', async (req, res) => {
+router.get('/daily', authMiddleware, async (req, res) => {
   try {
-    const { client_id, days = 7 } = req.query;
+    // SECURITY FIX: Use authenticated user's client_id, NOT query parameter
+    // SECURITY FIX: Use parameterized query to prevent SQL injection
+    const daysInt = Math.min(Math.max(parseInt(req.query.days) || 7, 1), 365);
+    const userClientId = req.user.client_id;
 
-    let whereClause = 'WHERE start_ts >= NOW() - INTERVAL \'' + parseInt(days) + ' days\'';
-    const params = [];
-    let paramIndex = 1;
-
-    if (client_id) {
-      whereClause += ` AND client_id = $${paramIndex}`;
-      params.push(client_id);
-      paramIndex++;
-    }
+    let whereClause = 'WHERE client_id = $1 AND start_ts >= NOW() - CAST($2 AS INTERVAL)';
+    const params = [userClientId, `${daysInt} days`];
+    let paramIndex = 3;
 
     const result = await db.query(
       `SELECT 

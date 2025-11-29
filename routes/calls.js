@@ -135,7 +135,7 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // GET /api/calls/:id - Get single call with actions (MULTI-TENANT: verify ownership)
-router.get('/:id', async (req, res) => {
+router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const userClientId = req.user.client_id;
@@ -180,10 +180,21 @@ router.get('/:id', async (req, res) => {
 });
 
 // PATCH /api/calls/:id - Update call
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
+    const userClientId = req.user.client_id;
     const updates = req.body;
+
+    // Verify ownership - ensure call belongs to authenticated user's company
+    const callCheck = await db.query(
+      'SELECT id FROM calls WHERE id = $1 AND client_id = $2',
+      [id, userClientId]
+    );
+
+    if (callCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Access denied - call not found or not your company\'s call' });
+    }
 
     // Validate allowed fields
     const allowedFields = ['resolved', 'transcript_full', 'recording_url'];
