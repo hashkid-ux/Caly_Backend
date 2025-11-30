@@ -8,15 +8,27 @@ const JWTUtils = require('./jwtUtils');
  */
 const authMiddleware = async (req, res, next) => {
   try {
-    // Extract token from Authorization header
+    let token = null;
+
+    // ✅ FIX: Check BOTH Authorization header AND httpOnly cookies
+    // This supports both password login (httpOnly cookies) and OAuth (Authorization header)
+    
+    // Strategy 1: Try Authorization header (OAuth, manual token in header)
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        error: 'Missing or invalid authorization header' 
-      });
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Remove "Bearer " prefix
+    }
+    
+    // Strategy 2: Try httpOnly cookie (Password login, form-based)
+    if (!token && req.cookies?.accessToken) {
+      token = req.cookies.accessToken;
     }
 
-    const token = authHeader.substring(7); // Remove "Bearer " prefix
+    if (!token) {
+      return res.status(401).json({ 
+        error: 'Missing or invalid authorization header or session cookie' 
+      });
+    }
 
     // Verify token
     const decoded = JWTUtils.verifyToken(token);

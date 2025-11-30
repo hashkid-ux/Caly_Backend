@@ -396,9 +396,12 @@ router.post('/login', loginLimiter, withLoginTimeout(async (req, res) => {
       [user.client_id, JSON.stringify({ email }), user.id, req.ip]
     ).catch(err => logger.debug('Failed to log', { error: err.message }));
 
-    // ✅ SECURITY: Don't return tokens in response - they're in httpOnly cookies
+    // ✅ SECURITY: Also return tokens in JSON for frontend flexibility
+    // Frontend can store in localStorage if preferred, or rely on httpOnly cookies
     res.json({
       message: 'Login successful',
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -418,13 +421,30 @@ router.post('/login', loginLimiter, withLoginTimeout(async (req, res) => {
 
 /**
  * POST /api/auth/refresh - Refresh access token
- * Body: {} (refresh token is in httpOnly cookie)
- * Returns new access token via httpOnly cookie
+ * Supports two strategies:
+ * 1. httpOnly cookie (password login): refreshToken in cookie
+ * 2. Authorization header (OAuth): refreshToken as Bearer token in header
+ * Returns new access token via httpOnly cookie AND JSON response
  */
 router.post('/refresh', async (req, res) => {
   try {
-    // ✅ SECURITY FIX: Get refresh token from httpOnly cookie, not request body
-    const refreshToken = req.cookies?.refreshToken;
+    let refreshToken = null;
+
+    // ✅ FIX: Check BOTH httpOnly cookies AND Authorization header
+    // Strategy 1: httpOnly cookie (password login)
+    if (req.cookies?.refreshToken) {
+      refreshToken = req.cookies.refreshToken;
+    }
+
+    // Strategy 2: Authorization header (OAuth)
+    if (!refreshToken && req.headers.authorization?.startsWith('Bearer ')) {
+      refreshToken = req.headers.authorization.substring(7);
+    }
+
+    // Strategy 3: Request body (fallback for edge cases)
+    if (!refreshToken && req.body?.refreshToken) {
+      refreshToken = req.body.refreshToken;
+    }
 
     if (!refreshToken) {
       return res.status(401).json({ error: 'Refresh token required - no valid session' });
@@ -469,10 +489,12 @@ router.post('/refresh', async (req, res) => {
       tokenRotated: true
     });
 
-    // ✅ SECURITY: Don't return tokens in response - they're in httpOnly cookies
+    // ✅ Also return tokens in response for frontend flexibility
     res.json({
       message: 'Token refreshed',
-      expiresIn: '1h'
+      expiresIn: '1h',
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken
     });
 
   } catch (error) {
