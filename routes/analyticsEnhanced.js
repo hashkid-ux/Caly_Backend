@@ -4,15 +4,18 @@ const router = express.Router();
 const resolve = require('../utils/moduleResolver');
 const db = require(resolve('db/postgres'));
 const logger = require(resolve('utils/logger'));
+const { authMiddleware } = require(resolve('auth/authMiddleware'));
 
 /**
  * GET /api/analytics/comprehensive - Get comprehensive analytics (OPTIMIZED)
  * Uses indexed queries for 4-5x faster response times
+ * Supports ?range=today|7d|30d|90d
  */
-router.get('/comprehensive', async (req, res) => {
+router.get('/comprehensive', authMiddleware, async (req, res) => {
   try {
     const { range = '7d' } = req.query;
-    const clientId = req.user?.client_id || req.query.clientId || 'all';
+    // SECURITY FIX: Use authenticated user's client_id, don't allow query parameter override
+    const userClientId = req.user.client_id;
     
     // Parse time range
     let days = 7;
@@ -27,15 +30,10 @@ router.get('/comprehensive', async (req, res) => {
       startDate.setHours(0, 0, 0, 0);
     }
 
-    // Build WHERE clause
-    let whereClause = 'WHERE created_at >= $1';
-    const params = [startDate];
+    // Build WHERE clause - FORCE client_id filter
+    let whereClause = 'WHERE created_at >= $1 AND client_id = $2';
+    const params = [startDate, userClientId];
     
-    if (clientId !== 'all') {
-      whereClause += ' AND client_id = $2';
-      params.push(clientId);
-    }
-
     // OPTIMIZED QUERY 1: Basic call stats (single table, indexed)
     const kpisResult = await db.query(`
       SELECT 
