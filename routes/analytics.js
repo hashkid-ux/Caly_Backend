@@ -96,13 +96,6 @@ router.get('/kpis', authMiddleware, async (req, res) => {
     }
   }
 });
-    });
-
-  } catch (error) {
-    logger.error('Error fetching KPIs', { error: error.message });
-    res.status(500).json({ error: 'Failed to fetch KPIs' });
-  }
-});
 
 // GET /api/analytics/hourly - Hourly call volume
 router.get('/hourly', authMiddleware, async (req, res) => {
