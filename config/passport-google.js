@@ -35,6 +35,7 @@ passport.use(
         }
         return process.env.GOOGLE_CALLBACK_URL || 'http://localhost:8080/api/auth/google/callback';
       })(),
+      scope: ['profile', 'email'],
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
