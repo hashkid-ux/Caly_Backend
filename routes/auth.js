@@ -223,11 +223,61 @@ router.post('/verify-email', otpVerifyLimiter, async (req, res) => {
       [user.client_id]
     );
 
-    logger.info('Email verified', { userId: user.id, email });
+    // ✅ FIX: Generate tokens immediately after email verification
+    // Get full user data for token payload
+    const verifiedUserResult = await db.query(
+      `SELECT u.id, u.email, u.name, u.role, u.client_id, c.name as company_name
+       FROM users u
+       JOIN clients c ON u.client_id = c.id
+       WHERE u.id = $1`,
+      [user.id]
+    );
 
+    const verifiedUser = verifiedUserResult.rows[0];
+
+    // Generate tokens
+    const tokenPayload = {
+      userId: verifiedUser.id,
+      email: verifiedUser.email,
+      client_id: verifiedUser.client_id,
+      role: verifiedUser.role,
+      companyName: verifiedUser.company_name
+    };
+
+    const { accessToken, refreshToken } = JWTUtils.generateTokenPair(tokenPayload);
+
+    // Set httpOnly cookies
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 1000,  // 1 hour
+      path: '/'
+    });
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,  // 7 days
+      path: '/api/auth/refresh'
+    });
+
+    logger.info('Email verified and session created', { userId: verifiedUser.id, email, clientId: verifiedUser.client_id });
+
+    // ✅ Return tokens so frontend can save to localStorage
     res.json({
-      message: 'Email verified successfully. You can now log in.',
-      verified: true
+      message: 'Email verified successfully! Redirecting to onboarding...',
+      verified: true,
+      accessToken,
+      refreshToken,
+      user: {
+        id: verifiedUser.id,
+        email: verifiedUser.email,
+        name: verifiedUser.name,
+        clientId: verifiedUser.client_id,
+        companyName: verifiedUser.company_name
+      }
     });
 
   } catch (error) {
