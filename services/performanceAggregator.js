@@ -62,7 +62,6 @@ class PerformanceAggregator {
       const callsResult = await db.query(
         `SELECT * FROM calls 
          WHERE DATE(created_at) = CURRENT_DATE 
-         AND call_status IN ('completed', 'escalated', 'transferred')
          AND (agent_type IS NOT NULL OR team_member_id IS NOT NULL)
          ORDER BY created_at DESC`
       );
@@ -77,7 +76,7 @@ class PerformanceAggregator {
       const teamMetrics = {};
 
       callsResult.rows.forEach(call => {
-        const isSuccess = call.call_status === 'completed' && call.satisfaction_score >= 4;
+        const isSuccess = call.resolved === true && call.customer_satisfaction >= 4;
         const callDuration = call.duration_seconds || 0;
 
         // Agent metrics
@@ -103,10 +102,10 @@ class PerformanceAggregator {
             agentMetrics[agentKey].calls_failed++;
           }
           agentMetrics[agentKey].total_duration += callDuration;
-          if (call.satisfaction_score) {
-            agentMetrics[agentKey].satisfaction_scores.push(call.satisfaction_score);
+          if (call.customer_satisfaction) {
+            agentMetrics[agentKey].satisfaction_scores.push(call.customer_satisfaction);
           }
-          if (call.call_status === 'escalated') {
+          if (call.escalated === true) {
             agentMetrics[agentKey].escalations++;
           }
         }
@@ -129,15 +128,15 @@ class PerformanceAggregator {
           }
 
           teamMetrics[teamMemberKey].calls_handled++;
-          if (call.call_status === 'completed') {
+          if (call.resolved === true) {
             teamMetrics[teamMemberKey].calls_completed++;
           }
-          if (call.call_status === 'escalated') {
+          if (call.escalated === true) {
             teamMetrics[teamMemberKey].calls_escalated++;
           }
           teamMetrics[teamMemberKey].total_duration += callDuration;
-          if (call.satisfaction_score) {
-            teamMetrics[teamMemberKey].satisfaction_scores.push(call.satisfaction_score);
+          if (call.customer_satisfaction) {
+            teamMetrics[teamMemberKey].satisfaction_scores.push(call.customer_satisfaction);
           }
           if (call.agent_type) {
             teamMetrics[teamMemberKey].agents_used.add(call.agent_type);
@@ -324,6 +323,32 @@ class PerformanceAggregator {
    */
   async updateAgentSuccessRates() {
     try {
+      // Check if agent_metrics_v2 table exists first
+      const tableCheck = await db.query(
+        `SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'agent_metrics_v2'
+        )`
+      );
+
+      if (!tableCheck.rows[0].exists) {
+        logger.debug('agent_metrics_v2 table not found, skipping success rate update');
+        return;
+      }
+
+      // Check if sector_agents has success_rate column
+      const colCheck = await db.query(
+        `SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_name = 'sector_agents' AND column_name = 'success_rate'
+        )`
+      );
+
+      if (!colCheck.rows[0].exists) {
+        logger.debug('success_rate column not found in sector_agents, skipping update');
+        return;
+      }
+
       // Update from agent_metrics_v2 last 7 days
       await db.query(
         `UPDATE sector_agents sa SET
@@ -339,7 +364,7 @@ class PerformanceAggregator {
             WHERE am.agent_type = sa.agent_type
             AND am.date >= CURRENT_DATE - INTERVAL '7 days'
           )
-        WHERE is_available = true`
+        WHERE enabled = true`
       );
 
       logger.debug('Agent success rates updated');

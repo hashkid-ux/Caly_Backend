@@ -35,7 +35,7 @@ class AgentRouter {
     try {
       const result = await db.query(
         `SELECT * FROM sector_agents 
-         WHERE is_available = true 
+         WHERE enabled = true 
          ORDER BY sector, agent_type`
       );
 
@@ -314,7 +314,7 @@ class AgentRouter {
           ROUND(AVG(success_rate)::numeric, 2) as avg_success_rate,
           ROUND(AVG(avg_handling_time)::numeric, 2) as avg_handling_time
          FROM sector_agents
-         WHERE client_id = $1 AND sector = $2 AND is_available = true
+         WHERE client_id = $1 AND sector = $2 AND enabled = true
          GROUP BY agent_type`,
         [clientId, sector]
       );
@@ -334,7 +334,7 @@ class AgentRouter {
     try {
       const result = await db.query(
         `SELECT COUNT(*) as total, 
-                SUM(CASE WHEN is_available = true THEN 1 ELSE 0 END) as available
+                SUM(CASE WHEN enabled = true THEN 1 ELSE 0 END) as available
          FROM sector_agents`
       );
 

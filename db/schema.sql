@@ -87,11 +87,17 @@ CREATE TABLE IF NOT EXISTS sector_agents (
   agent_class VARCHAR(255) NOT NULL, -- Full class name for dynamic loading
   enabled BOOLEAN DEFAULT TRUE,
   priority INTEGER DEFAULT 100, -- Lower = higher priority for intent matching
+  success_rate FLOAT DEFAULT 0.8, -- Success rate for routing optimization
+  avg_handling_time INTEGER DEFAULT 300, -- Average handling time in seconds
   
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(sector, agent_type)
 );
+
+-- Ensure performance columns exist (safe for existing DBs)
+ALTER TABLE IF EXISTS sector_agents ADD COLUMN IF NOT EXISTS success_rate FLOAT DEFAULT 0.8;
+ALTER TABLE IF EXISTS sector_agents ADD COLUMN IF NOT EXISTS avg_handling_time INTEGER DEFAULT 300;
 
 -- ✅ SECTOR EXPANSION: Create sector_entities table (defines entity types per sector)
 CREATE TABLE IF NOT EXISTS sector_entities (
@@ -169,10 +175,20 @@ CREATE TABLE IF NOT EXISTS calls (
   transcript_full TEXT,
   recording_url TEXT,
   resolved BOOLEAN DEFAULT FALSE,
+  escalated BOOLEAN DEFAULT FALSE,
   customer_satisfaction INTEGER, -- 1-5 rating
+  agent_type VARCHAR(100),
+  team_member_id UUID,
+  team_id UUID,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Ensure all required columns exist with ALTER TABLE (safe for existing DBs)
+ALTER TABLE IF EXISTS calls ADD COLUMN IF NOT EXISTS escalated BOOLEAN DEFAULT FALSE;
+ALTER TABLE IF EXISTS calls ADD COLUMN IF NOT EXISTS agent_type VARCHAR(100);
+ALTER TABLE IF EXISTS calls ADD COLUMN IF NOT EXISTS team_member_id UUID;
+ALTER TABLE IF EXISTS calls ADD COLUMN IF NOT EXISTS team_id UUID;
 
 -- Actions table: Tracks all backend actions performed during calls
 CREATE TABLE IF NOT EXISTS actions (
