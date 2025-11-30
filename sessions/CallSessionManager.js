@@ -6,6 +6,7 @@ const AgentOrchestrator = require(resolve('agents/orchestrator'));
 const logger = require(resolve('utils/logger'));
 const db = require(resolve('db/postgres'));
 const wasabiStorage = require(resolve('services/wasabiStorage'));
+const performanceTracker = require(resolve('services/performanceTracker'));
 const EventEmitter = require('events');
 
 // Session timeout (15 minutes of inactivity)
@@ -229,6 +230,40 @@ class CallSessionManager extends EventEmitter {
       // Update STS context with agent result
       const contextUpdate = `SYSTEM: ${data.result.contextUpdate}`;
       session.stsSession.updateContext(contextUpdate);
+
+      // 🎯 PHASE 8: Update team member performance metrics
+      try {
+        if (session.callData.team_member_id) {
+          // Calculate call metrics from agent result
+          const callResult = {
+            resolved: data.result.success,
+            escalated: data.result.escalated || false,
+            success: data.result.success ? 1 : 0,
+            handling_time_seconds: Math.round((Date.now() - session.startTime) / 1000),
+            customer_satisfaction: data.result.satisfaction_score || 0,
+            agent_type: data.agentType
+          };
+
+          // Update team member performance in database
+          await performanceTracker.updateTeamMemberPerformance(
+            session.callData.team_member_id,
+            callResult
+          );
+
+          logger.info('Team member performance updated', {
+            callId,
+            team_member_id: session.callData.team_member_id,
+            agentType: data.agentType,
+            metrics: callResult
+          });
+        }
+      } catch (trackerError) {
+        // Performance tracking shouldn't block call flow
+        logger.warn('Failed to update performance metrics', {
+          callId,
+          error: trackerError.message
+        });
+      }
 
       session.currentIntent = null;
       session.waitingForEntity = null;

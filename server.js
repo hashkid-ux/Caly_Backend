@@ -368,8 +368,22 @@ app.use('/api/metrics', authMiddleware, require(resolve('routes/metricsLive')));
 app.use('/api/calls', authMiddleware, require(resolve('routes/livecalls')));
 app.use('/api/clients', authMiddleware, require(resolve('routes/clients'))); // Multi-tenancy + dashboard route
 app.use('/api/recordings', authMiddleware, require(resolve('routes/recordings'))); // Call recordings from Wasabi
-app.use('/api/sector', authMiddleware, require(resolve('routes/sectorConfig'))); // Sector configuration management
-app.use('/api/teams', authMiddleware, require(resolve('routes/teamsRoutes'))); // Teams management - sector-based organization
+
+// ✅ PHASE 8: Team Management & Sector-Specific Configuration Routes
+app.use('/api/sector-config', authMiddleware, require(resolve('routes/sectorConfig'))); // Sector-specific API configuration
+app.use('/api/teams', authMiddleware, require(resolve('routes/teams'))); // Team member CRUD + agent assignments + performance
+
+// ✅ PHASE 9: QA Workflow & Call Review System Routes
+app.use('/api/qa', authMiddleware, require(resolve('routes/qa'))); // QA reviews, feedback, coaching
+
+// ✅ PHASE 10: Advanced Analytics & Business Intelligence Routes
+app.use('/api/analytics', authMiddleware, require(resolve('routes/advanced-analytics'))); // Advanced dashboards, trends, custom reports
+
+// ✅ PHASE 11: Admin Console & System Settings Routes
+app.use('/api/admin', authMiddleware, require(resolve('routes/admin'))); // Admin operations, user management
+app.use('/api/settings', authMiddleware, require(resolve('routes/admin-settings'))); // System settings, configurations
+
+app.use('/api/sector', authMiddleware, require(resolve('routes/sectorConfig'))); // Legacy sector configuration management
 app.use('/api/settings', authMiddleware, require(resolve('routes/settingsRoutes'))); // Company settings & business rules
 app.use('/api/channels', authMiddleware, require(resolve('routes/channelsRoutes'))); // Multi-channel configuration (SMS, Email, Voice, etc)
 

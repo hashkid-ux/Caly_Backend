@@ -4,6 +4,7 @@ const resolve = require('../utils/moduleResolver');
 const db = require(resolve('db/postgres'));
 const logger = require(resolve('utils/logger'));
 const { queueRecordingUpload } = require(resolve('services/recordingService'));
+const agentRouter = require(resolve('services/agentRouter'));
 
 // Get webhook base URL - strict production validation
 const getWebhookBaseUrl = () => {
@@ -58,12 +59,67 @@ const handleCallStart = async (req, res) => {
       return res.status(404).json({ error: 'Client not found' });
     }
 
-    // Create call record in database
+    // 🎯 PHASE 8: Try to route call to team member
+    let teamMemberId = null;
+    let agentType = null;
+    let teamId = null;
+
+    try {
+      // Get client's sector (if available) to route to team member
+      const clientResult = await db.query(
+        'SELECT sector FROM clients WHERE id = $1',
+        [client.id]
+      );
+
+      if (clientResult.rows.length > 0) {
+        const sector = clientResult.rows[0].sector;
+        
+        // Select best team member for this sector
+        const selectedAgent = await agentRouter.selectAgent(
+          client.id,
+          sector,
+          'inbound',
+          { phone: From }
+        );
+
+        if (selectedAgent && selectedAgent.team_member_id) {
+          teamMemberId = selectedAgent.team_member_id;
+          agentType = selectedAgent.agent_type;
+
+          // Get team_id from team_members table
+          const teamMemberResult = await db.query(
+            'SELECT team_id FROM team_members WHERE id = $1',
+            [teamMemberId]
+          );
+
+          if (teamMemberResult.rows.length > 0) {
+            teamId = teamMemberResult.rows[0].team_id;
+          }
+
+          logger.info('Call routed to team member', {
+            callId: CallSid,
+            teamMemberId,
+            agentType,
+            teamId
+          });
+        }
+      }
+    } catch (routingError) {
+      logger.warn('Failed to route to team member, using default routing', {
+        error: routingError.message
+      });
+      // Continue with default routing if team routing fails
+    }
+
+    // Create call record in database with team member assignment
     const call = await db.calls.create({
       client_id: client.id,
       call_sid: CallSid,
       phone_from: From,
-      phone_to: To
+      phone_to: To,
+      team_member_id: teamMemberId,
+      team_id: teamId,
+      agent_type: agentType
     });
 
     // Log audit event
@@ -71,7 +127,7 @@ const handleCallStart = async (req, res) => {
       call_id: call.id,
       client_id: client.id,
       event_type: 'call_started',
-      payload: { CallSid, From, To, CallStatus },
+      payload: { CallSid, From, To, CallStatus, teamMemberId, agentType },
       ip_address: req.ip
     });
 
