@@ -6,7 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const resolve = require('../utils/moduleResolver');
-const authMiddleware = require(resolve('middleware/authMiddleware'));
+const { authMiddleware } = require(resolve('auth/authMiddleware'));
 const logger = require(resolve('utils/logger'));
 const telephonyRouter = require(resolve('services/telephonyRouter'));
 const apiResponse = require(resolve('utils/apiResponse'));

@@ -7,7 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const resolve = require('../utils/moduleResolver');
-const authMiddleware = require(resolve('middleware/authMiddleware'));
+const { authMiddleware } = require(resolve('auth/authMiddleware'));
 const credentialManager = require(resolve('services/credentialManager'));
 const db = require(resolve('db/postgres'));
 const logger = require(resolve('utils/logger'));
