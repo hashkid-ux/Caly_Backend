@@ -4,7 +4,8 @@
  */
 
 const twilio = require('twilio');
-const logger = require('../../utils/logger');
+const resolve = require('../utils/moduleResolver');
+const logger = require(resolve('utils/logger'));
 
 class TwilioProvider {
   constructor() {

@@ -5,7 +5,8 @@
 
 const axios = require('axios');
 const crypto = require('crypto');
-const logger = require('../../utils/logger');
+const resolve = require('../utils/moduleResolver');
+const logger = require(resolve('utils/logger'));
 
 class CustomProvider {
   /**
