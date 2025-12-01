@@ -369,6 +369,15 @@ app.use('/api/calls', authMiddleware, require(resolve('routes/livecalls')));
 app.use('/api/clients', authMiddleware, require(resolve('routes/clients'))); // Multi-tenancy + dashboard route
 app.use('/api/recordings', authMiddleware, require(resolve('routes/recordings'))); // Call recordings from Wasabi
 
+// ✅ NEW: Dynamic Settings & Credentials Management
+app.use('/api/settings', authMiddleware, require(resolve('routes/settingsNewDynamic'))); // Dynamic credential collection per sector
+
+// ✅ NEW: Dynamic Agent Management
+app.use('/api/agents', authMiddleware, require(resolve('routes/agentsNewDynamic'))); // Agent enable/disable + configuration
+
+// ✅ NEW: Multi-Provider Telephony Router
+app.use('/api/providers', require(resolve('routes/providersNewDynamic'))); // Provider selection + failover
+
 // ✅ PHASE 8: Team Management & Sector-Specific Configuration Routes
 app.use('/api/sector-config', authMiddleware, require(resolve('routes/sectorConfig'))); // Sector-specific API configuration
 app.use('/api/teams', authMiddleware, require(resolve('routes/teams'))); // Team member CRUD + agent assignments + performance
