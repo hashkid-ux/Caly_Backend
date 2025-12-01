@@ -5,9 +5,9 @@
  * Real implementation - NOT hardcoded!
  */
 
-const db = require('../../db/postgres');
-const logger = require('../../utils/logger');
-const resolve = require('../../utils/moduleResolver');
+const resolve = require('../utils/moduleResolver');
+const db = require(resolve('db/postgres'));
+const logger = require(resolve('utils/logger'));
 
 class AgentRegistry {
   /**

@@ -5,15 +5,15 @@
  * Real multi-provider support - NO HARDCODING!
  */
 
-const db = require('../../db/postgres');
-const logger = require('../../utils/logger');
-const resolve = require('../../utils/moduleResolver');
-const ExotelProvider = require('../providers/exotelProvider');
-const TwilioProvider = require('../providers/twilioProvider');
-const VoiceBaseProvider = require('../providers/voicebaseProvider');
-const CustomProvider = require('../providers/customProvider');
-const CircuitBreaker = require('../../utils/circuitBreaker');
-const { withTimeout } = require('../../utils/timeoutUtil');
+const resolve = require('../utils/moduleResolver');
+const db = require(resolve('db/postgres'));
+const logger = require(resolve('utils/logger'));
+const ExotelProvider = require(resolve('providers/exotelProvider'));
+const TwilioProvider = require(resolve('providers/twilioProvider'));
+const VoiceBaseProvider = require(resolve('providers/voicebaseProvider'));
+const CustomProvider = require(resolve('providers/customProvider'));
+const CircuitBreaker = require(resolve('utils/circuitBreaker'));
+const { withTimeout } = require(resolve('utils/timeoutUtil'));
 
 class TelephonyRouter {
   constructor() {
