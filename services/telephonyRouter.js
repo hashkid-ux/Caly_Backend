@@ -12,7 +12,7 @@ const ExotelProvider = require(resolve('providers/exotelProvider'));
 const TwilioProvider = require(resolve('providers/twilioProvider'));
 const VoiceBaseProvider = require(resolve('providers/voicebaseProvider'));
 const CustomProvider = require(resolve('providers/customProvider'));
-const CircuitBreaker = require(resolve('utils/circuitBreaker'));
+const { CircuitBreaker } = require(resolve('utils/circuitBreaker'));
 const { withTimeout } = require(resolve('utils/timeoutUtil'));
 
 class TelephonyRouter {
