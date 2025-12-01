@@ -57,6 +57,7 @@
                          "redis":  "^4.6.11",
                          "swagger-jsdoc":  "^6.2.8",
                          "swagger-ui-express":  "^5.0.0",
+                         "twilio":  "^4.0.0",
                          "uuid":  "^9.0.1",
                          "winston":  "^3.11.0",
                          "ws":  "^8.14.2"
