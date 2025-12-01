@@ -5,11 +5,11 @@
 
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../../middleware/authMiddleware');
-const logger = require('../../utils/logger');
-const resolve = require('../../utils/moduleResolver');
-const agentRegistry = require('../../services/agentRegistry');
-const apiResponse = require('../../utils/apiResponse');
+const resolve = require('../utils/moduleResolver');
+const authMiddleware = require(resolve('middleware/authMiddleware'));
+const logger = require(resolve('utils/logger'));
+const agentRegistry = require(resolve('services/agentRegistry'));
+const apiResponse = require(resolve('utils/apiResponse'));
 
 /**
  * GET /api/agents
