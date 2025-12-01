@@ -6,12 +6,18 @@ const db = require(resolve('db/postgres'));
 const logger = require(resolve('utils/logger'));
 const Pagination = require(resolve('utils/pagination'));
 const { authMiddleware } = require(resolve('auth/authMiddleware'));
+const { sectorFilterMiddleware } = require(resolve('middleware/sectorFilter'));
 
-// GET /api/calls - List all calls (MULTI-TENANT: filtered by user's client_id)
-router.get('/', authMiddleware, async (req, res) => {
+// Apply auth middleware globally
+router.use(authMiddleware);
+router.use(sectorFilterMiddleware);
+
+// GET /api/calls - List all calls (MULTI-TENANT: filtered by user's client_id and sector)
+router.get('/', async (req, res) => {
   try {
     // CRITICAL: User can only see their own company's calls
     const userClientId = req.user.client_id;
+    const userSector = req.userSector;
     
     // Extract query parameters
     const {
@@ -30,10 +36,10 @@ router.get('/', authMiddleware, async (req, res) => {
     const pageLimit = Math.min(parseInt(limit) || 50, 500);
     const pageOffset = Math.max(parseInt(offset) || 0, 0);
 
-    // Start building query parameters with client_id
-    let queryParams = [userClientId];
-    let paramCount = 2;
-    let whereConditions = ['client_id = $1'];
+    // Start building query parameters with client_id and sector
+    let queryParams = [userClientId, userSector];
+    let paramCount = 3;
+    let whereConditions = ['client_id = $1', 'sector = $2'];
 
     // Add status/resolved filter
     if (status && status.trim()) {

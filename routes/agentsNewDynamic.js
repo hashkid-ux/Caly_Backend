@@ -7,20 +7,26 @@ const express = require('express');
 const router = express.Router();
 const resolve = require('../utils/moduleResolver');
 const { authMiddleware } = require(resolve('auth/authMiddleware'));
+const { sectorFilterMiddleware } = require(resolve('middleware/sectorFilter'));
 const logger = require(resolve('utils/logger'));
 const agentRegistry = require(resolve('services/agentRegistry'));
 const apiResponse = require(resolve('utils/apiResponse'));
 
+// Apply auth and sector filtering
+router.use(authMiddleware);
+router.use(sectorFilterMiddleware);
+
 /**
  * GET /api/agents
- * Get all available agents (admin view)
+ * Get all available agents for the user's sector
  */
-router.get('/', authMiddleware, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const agents = await agentRegistry.getAllAgents();
-    res.json(apiResponse.success(agents, 'Agents fetched successfully'));
+    const userSector = req.userSector;
+    const agents = await agentRegistry.getAgentsBySector(userSector);
+    res.json(apiResponse.success(agents, `Agents for ${userSector} sector`));
   } catch (error) {
-    logger.error('Error fetching agents', { error: error.message });
+    logger.error('Error fetching agents', { sector: req.userSector, error: error.message });
     res.status(500).json(apiResponse.error('Failed to fetch agents', 500));
   }
 });
@@ -29,9 +35,16 @@ router.get('/', authMiddleware, async (req, res) => {
  * GET /api/agents/sector/:sector
  * Get agents for a specific sector
  */
-router.get('/sector/:sector', authMiddleware, async (req, res) => {
+router.get('/sector/:sector', async (req, res) => {
   try {
     const { sector } = req.params;
+    const userSector = req.userSector;
+    
+    // Only allow users to view agents for their assigned sector
+    if (sector !== userSector) {
+      return res.status(403).json(apiResponse.error('Cannot view agents for other sectors', 403));
+    }
+    
     const agents = await agentRegistry.getAgentsBySector(sector);
     res.json(apiResponse.success(agents, `Agents for ${sector} sector`));
   } catch (error) {
@@ -42,12 +55,13 @@ router.get('/sector/:sector', authMiddleware, async (req, res) => {
 
 /**
  * GET /api/agents/client/enabled
- * Get agents enabled for the current client
+ * Get agents enabled for the current client and sector
  */
-router.get('/client/enabled', authMiddleware, async (req, res) => {
+router.get('/client/enabled', async (req, res) => {
   try {
     const clientId = req.user.client_id;
-    const agents = await agentRegistry.getEnabledAgentsForClient(clientId);
+    const userSector = req.userSector;
+    const agents = await agentRegistry.getEnabledAgentsForClientAndSector(clientId, userSector);
     res.json(apiResponse.success(agents, 'Client enabled agents'));
   } catch (error) {
     logger.error('Error fetching client enabled agents', { clientId: req.user.client_id, error: error.message });

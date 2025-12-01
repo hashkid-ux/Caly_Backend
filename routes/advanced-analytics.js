@@ -4,6 +4,8 @@ const db = require('../db/postgres');
 const logger = require('../utils/logger');
 const { withTimeout } = require('../utils/timeoutUtil');
 const resolve = require('../utils/moduleResolver');
+const { authMiddleware } = require(resolve('auth/authMiddleware'));
+const { sectorFilterMiddleware } = require(resolve('middleware/sectorFilter'));
 
 /**
  * Advanced Analytics Routes - Phase 10
@@ -11,15 +13,20 @@ const resolve = require('../utils/moduleResolver');
  * Requires: authMiddleware (user must be logged in)
  */
 
+// Apply auth and sector filtering
+router.use(authMiddleware);
+router.use(sectorFilterMiddleware);
+
 // ===== DASHBOARD ANALYTICS =====
 
 /**
  * GET /api/analytics/dashboard
- * Main dashboard KPIs for team overview
+ * Main dashboard KPIs for team overview (sector-filtered)
  */
 router.get('/dashboard', async (req, res) => {
   try {
     const { client_id } = req.user;
+    const { userSector } = req;
     const { days = 30 } = req.query;
     const daysInt = parseInt(days);
 
@@ -32,8 +39,8 @@ router.get('/dashboard', async (req, res) => {
           AVG(EXTRACT(EPOCH FROM (ended_at - started_at))) as avg_duration,
           COUNT(CASE WHEN escalated = true THEN 1 END) as escalated_count
         FROM calls 
-        WHERE client_id = $1 AND created_at > NOW() - INTERVAL '${daysInt} days'`,
-        [client_id]
+        WHERE client_id = $1 AND sector = $2 AND created_at > NOW() - INTERVAL '${daysInt} days'`,
+        [client_id, userSector]
       );
 
       // Team metrics
@@ -44,8 +51,8 @@ router.get('/dashboard', async (req, res) => {
           MAX(qa_score) as max_qa_score,
           MIN(qa_score) as min_qa_score
         FROM team_members 
-        WHERE client_id = $1 AND status = 'active'`,
-        [client_id]
+        WHERE client_id = $1 AND sector = $2 AND status = 'active'`,
+        [client_id, userSector]
       );
 
       // Agent performance

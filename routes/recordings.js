@@ -1,26 +1,33 @@
 // Backend/routes/recordings.js - Recording Management API
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../auth/authMiddleware');
-const wasabiStorage = require('../services/wasabiStorage');
-const db = require('../db/postgres');
-const logger = require('../utils/logger');
-const Pagination = require('../utils/pagination');
-const { sendSuccess, sendError, sendList, sendNotFound } = require('../utils/apiResponse');
+const resolve = require('../utils/moduleResolver');
+const { authMiddleware } = require(resolve('auth/authMiddleware'));
+const { sectorFilterMiddleware } = require(resolve('middleware/sectorFilter'));
+const wasabiStorage = require(resolve('services/wasabiStorage'));
+const db = require(resolve('db/postgres'));
+const logger = require(resolve('utils/logger'));
+const Pagination = require(resolve('utils/pagination'));
+const { sendSuccess, sendError, sendList, sendNotFound } = require(resolve('utils/apiResponse'));
+
+// Apply auth and sector filtering
+router.use(authMiddleware);
+router.use(sectorFilterMiddleware);
 
 /**
  * GET /api/recordings/:callId
- * Get pre-signed URL for a call recording
+ * Get pre-signed URL for a call recording (sector-filtered)
  */
-router.get('/:callId', authMiddleware, async (req, res) => {
+router.get('/:callId', async (req, res) => {
   try {
     const { callId } = req.params;
     const clientId = req.user.client_id;
+    const userSector = req.userSector;
 
-    // Verify call belongs to authenticated client
+    // Verify call belongs to authenticated client and sector
     const result = await db.query(
-      'SELECT * FROM calls WHERE id = $1 AND client_id = $2',
-      [callId, clientId]
+      'SELECT * FROM calls WHERE id = $1 AND client_id = $2 AND sector = $3',
+      [callId, clientId, userSector]
     );
 
     if (result.rows.length === 0) {

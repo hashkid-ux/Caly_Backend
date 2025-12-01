@@ -7,9 +7,15 @@
 
 const express = require('express');
 const router = express.Router();
-const db = require('../db/postgres');
-const { authMiddleware } = require('../auth/authMiddleware');
-const logger = require('../utils/logger');
+const resolve = require('../utils/moduleResolver');
+const db = require(resolve('db/postgres'));
+const { authMiddleware } = require(resolve('auth/authMiddleware'));
+const { sectorFilterMiddleware } = require(resolve('middleware/sectorFilter'));
+const logger = require(resolve('utils/logger'));
+
+// Apply auth and sector filtering
+router.use(authMiddleware);
+router.use(sectorFilterMiddleware);
 
 // ============================================================================
 // 1. REPORT GENERATION ENDPOINTS
@@ -17,11 +23,12 @@ const logger = require('../utils/logger');
 
 /**
  * POST /api/analytics/reports/generate
- * Generate a custom report
+ * Generate a custom report (sector-filtered)
  */
-router.post('/reports/generate', authMiddleware, async (req, res) => {
+router.post('/reports/generate', async (req, res) => {
   try {
     const userClientId = req.user.client_id;
+    const userSector = req.userSector;
     const {
       reportType,
       startDate,

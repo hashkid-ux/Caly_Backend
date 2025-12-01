@@ -4,11 +4,13 @@ const router = express.Router();
 const resolve = require('../utils/moduleResolver');
 const db = require(resolve('db/postgres'));
 const { authMiddleware } = require(resolve('auth/authMiddleware'));
+const { sectorFilterMiddleware } = require(resolve('middleware/sectorFilter'));
 const logger = require(resolve('utils/logger'));
 const { v4: uuidv4 } = require('uuid');
 
-// ✅ PHASE 8: Team Management - All routes require authentication & multi-tenancy
+// Apply auth and sector filtering
 router.use(authMiddleware);
+router.use(sectorFilterMiddleware);
 
 /**
  * GET /api/teams - List all team members for authenticated client
@@ -17,6 +19,7 @@ router.use(authMiddleware);
 router.get('/', async (req, res) => {
   try {
     const { client_id } = req.user;
+    const userSector = req.userSector;
 
     const result = await db.query(
       `SELECT 
@@ -52,11 +55,11 @@ router.get('/', async (req, res) => {
       LEFT JOIN users u ON tm.user_id = u.id
       LEFT JOIN team_agent_assignments taa ON tm.id = taa.team_member_id
       WHERE tm.team_id IN (
-        SELECT id FROM teams WHERE client_id = $1
+        SELECT id FROM teams WHERE client_id = $1 AND sector = $2
       )
       GROUP BY tm.id, u.email
       ORDER BY tm.created_at DESC`,
-      [client_id]
+      [client_id, userSector]
     );
 
     logger.info('Team members fetched', {

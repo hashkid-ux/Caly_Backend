@@ -5,22 +5,24 @@ const resolve = require('../utils/moduleResolver');
 const db = require(resolve('db/postgres'));
 const logger = require(resolve('utils/logger'));
 const { authMiddleware } = require(resolve('auth/authMiddleware'));
+const { sectorFilterMiddleware } = require(resolve('middleware/sectorFilter'));
 const { withTimeout } = require(resolve('utils/timeoutUtil'));
+
+// Apply sector filtering to all analytics routes
+router.use(sectorFilterMiddleware);
 
 // GET /api/analytics/kpis - Get key performance indicators (MULTI-TENANT: filtered by user's company)
 router.get('/kpis', authMiddleware, async (req, res) => {
   try {
-    // SECURITY FIX: Add 30-second timeout to prevent DoS via slow queries
     await withTimeout(
       (async () => {
-        // CRITICAL: User can only see their own company's analytics
-        // Fixed: authMiddleware now applied - req.user is guaranteed to exist
         const userClientId = req.user.client_id;
+        const userSector = req.userSector;
         const { start_date, end_date } = req.query;
 
-        let whereClause = 'WHERE c.client_id = $1';
-        const params = [userClientId];
-        let paramIndex = 2;
+        let whereClause = 'WHERE c.client_id = $1 AND a.sector = $2';
+        const params = [userClientId, userSector];
+        let paramIndex = 3;
 
         if (start_date) {
           whereClause += ` AND c.start_ts >= $${paramIndex}`;
